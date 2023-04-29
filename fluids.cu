@@ -16,7 +16,7 @@ using Eigen::Vector2f;
  * Bilinear Interpolation
  * https://en.wikipedia.org/wiki/Bilinear_interpolation
  */
-Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
+__device__ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
     int i = pos(0);
     int j = pos(1);
     double dx = pos(0) - i;
@@ -43,7 +43,7 @@ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
     }
 }
 
-Vector2f divergence(
+__device__ Vector2f divergence(
     Vector2f x, Vector2f* from, float halfrdx, unsigned dim)
 {
     int i = x(0);
@@ -63,7 +63,7 @@ Vector2f divergence(
 /***
  * only for computing gradient of p.
 */
-Vector2f gradient(
+__device__ Vector2f gradient(
     Vector2f x, float* p, float halfrdx, unsigned dim) {
     int i = x(0);
     int j = x(1);
@@ -87,7 +87,7 @@ Vector2f gradient(
  * velfield is u, the velocity field as of the current time quanta.
  * field is the current field being updated.
 */
-void advect(Vector2f x, Vector2f* field, Vector2f* velfield, float timestep, float rdx, unsigned dim) {
+__device__ void advect(Vector2f x, Vector2f* field, Vector2f* velfield, float timestep, float rdx, unsigned dim) {
     Vector2f pos = x - timestep * rdx * velfield[IND(x(0), x(1), dim)];
     field[IND(x(0), x(1), dim)] = bilerp(pos, field, dim);
 }
@@ -97,7 +97,7 @@ void advect(Vector2f x, Vector2f* field, Vector2f* velfield, float timestep, flo
  * viscous diffusion of fluid.
 */
 template <typename T>
-void jacobi(Vector2f x, T* field, float alpha, float beta, Vector2f b, T zero, unsigned dim) {
+__device__ void jacobi(Vector2f x, T* field, float alpha, float beta, Vector2f b, T zero, unsigned dim) {
     int i = (int)x(0);
     int j = (int)x(1);
 
@@ -113,7 +113,7 @@ void jacobi(Vector2f x, T* field, float alpha, float beta, Vector2f b, T zero, u
 }
 
 
-void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float timestep, float r, unsigned dim) {
+__device__ void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float timestep, float r, unsigned dim) {
     float exp = (pow(x(0) - c(0), 2) + pow(x(1) - c(1), 2)) / 2;
     int i = x(0);
     int j = x(1);
