@@ -7,10 +7,10 @@
 #endif
 #include <eigen3/Eigen/Dense>
 
-#include <cuda_runtime.h>
-#include <cuda_gl_interop.h>
-#include <helper_cuda.h>
-#include <helper_functions.h>
+//#include <cuda_runtime.h>
+//#include <cuda_gl_interop.h>
+//#include <helper_cuda.h>
+//#include <helper_functions.h>
 
 #define IND(x, y, d) int((y) * (d) + (x))
 
