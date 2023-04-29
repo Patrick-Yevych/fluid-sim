@@ -51,6 +51,8 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
 
 
 /***
+ * Computes the advection of the fluid.
+ * 
  * x is the coordinate/position vector following notation of chp 38.
  * velfield is u, the velocity field as of the current time quanta.
  * field is the current field being updated.
@@ -61,7 +63,12 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
 }
 
 
-__device__ void jacobi(Vector2f x, Vector2f *field, float alpha, float beta, Vector2f b) {
+/***
+ * Jacobi iteration for computing pressure and
+ * viscous diffusion of fluid.
+*/
+template <typename T>
+__device__ void jacobi(Vector2f x, T *field, float alpha, float beta, Vector2f b) {
     Vector2f f00 = field[IND(x - 1, y - 1, dim)];
     Vector2f f01 = field[IND(x + 1, y - 1, dim)];
     Vector2f f10 = field[IND(x - 1, y + 1, dim)];
@@ -70,7 +77,8 @@ __device__ void jacobi(Vector2f x, Vector2f *field, float alpha, float beta, Vec
     return (f00 + f01 + f10 + f11 + alpha*b) / beta;
 }
 
-__global__ void kernel(void) {
+__global__ void kernel(Vector2f *velocity, Vector2f *pressure) {
+    Vector2f x(threadIdx.x, threadIdx.y);
     return;
 }
 
@@ -85,6 +93,7 @@ int main(void) {
     Vector2f *dev_velocity = initVectorField<Vector2f>(dim);
     float *dev_pressure = initScalarField<float>(dim);
 
-    kernel<<<1, dim>>>();
+    dim3 block(dim, dim);
+    kernel<<<1, block>>>();
     return 0;
 }
