@@ -173,8 +173,8 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vect
 }
 
 
-__device__ Vector3f velocityToColor(Vector2f x, Vector2f *u, unsigned dim) {
-    tinycolormap::Color color = tinycolormap::GetColor(u[IND(x(0), x(1), dim)].norm(), tinycolormap::ColormapType::Viridis);
+__device__ Vector3f getColor(Vector2f x, double val) {
+    tinycolormap::Color color = tinycolormap::GetColor(val, tinycolormap::ColormapType::Viridis);
 
     Vector3f ret(color.r(), color.g(), color.b());
     return ret;
@@ -186,7 +186,7 @@ __device__ Vector3f velocityToColor(Vector2f x, Vector2f *u, unsigned dim) {
 */
 __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
     Vector2f x(threadIdx.x, threadIdx.y);
-    uc[IND(x(0), x(1), dim)] = velocityToColor(x, u, dim);
+    uc[IND(x(0), x(1), dim)] = getColor(x, (double)u[IND(x(0), x(1), dim)].norm());
 }
 
 
