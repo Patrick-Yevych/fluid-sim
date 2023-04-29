@@ -7,7 +7,7 @@
 #endif
 #include <Eigen/Dense>
 
-#define IND(x, y, d) = int((y) * (d) + (x)))
+#define IND(x, y, d) = int((y) * (d) + (x))
 
 using namespace std;
 using Eigen::Vector2f;
@@ -46,7 +46,7 @@ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
     }
     else {
         // Perform bilinear interpolation.
-        Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[int((j - 1) * dim + i - 1)];
+        Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i - 1, j - 1, dim)];
 
         Vector2f f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i + 1, j - 1, dim)];
 
@@ -88,10 +88,10 @@ Vector2f gradient(
     if (i < 0 || i >= dim || j < 0 || j >= dim)
         return Vector2f::Zero();
 
-    float pL = (i - 1 < 0) ? 0 : p[IND(i - 1, j, dim)];
-    float pR = (i + 1 >= dim) ? 0 : p[IND(i + 1, j, dim)];
-    float pB = (j - 1 < 0) ? 0 : p[IND(i, j - 1, dim)];
-    float pT = (j + 1 >= dim) ? 0 : p[IND(i, j + 1, dim)];
+    float pL = (i - 1 < 0) ? Vector2f::Zero() : p[IND(i - 1, j, dim)];
+    float pR = (i + 1 >= dim) ? Vector2f::Zero() : p[IND(i + 1, j, dim)];
+    float pB = (j - 1 < 0) ? Vector2f::Zero() : p[IND(i, j - 1, dim)];
+    float pT = (j + 1 >= dim) ? Vector2f::Zero() : p[IND(i, j + 1, dim)];
 
     return halfrdx * Vector2f(pR - pL, pT - pB);
 }
@@ -115,8 +115,8 @@ void advect(Vector2f x, Vector2f* field, Vector2f* velfield, float timestep, flo
 */
 template <typename T>
 void jacobi(Vector2f x, T* field, float alpha, float beta, Vector2f b, unsigned dim) {
-    int i = (int)x(0);
-    int j = (int)x(1);
+    int i = x(0);
+    int j = x(1);
 
     T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i - 1, j - 1, dim)];
 
@@ -135,7 +135,7 @@ void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float timestep, 
     field[IND(i, j, dim)] = F * pow(timestep, exp);
 }
 
-void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, float timestep, float r, unsigned dim)
+void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, int timestep, float r, unsigned dim)
 {
     Vector2f x(threadIdx.x, threadIdx.y);
 
