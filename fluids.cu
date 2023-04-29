@@ -210,7 +210,6 @@ __device__ Vector3f getColor(double val, tinycolormap::ColormapType type) {
     return ret;
 }
 
-
 /***
  * color mapping kernel.
 */
@@ -220,7 +219,6 @@ __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
                                     (double)u[IND(x(0), x(1), dim)].norm(), 
                                     tinycolormap::ColormapType::Viridis);
 }
-
 
 int main(void) {
 
@@ -255,11 +253,29 @@ int main(void) {
     initializeField<Vector3f>(&uc, &dev_uc, Vector3f::Zero(), dim);
 
 
-    dim3 threads(dim, dim);
-    while (true) {
-        nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, C, F, timestep, r, dim);
-        sleep(timestep);
-        // decayForce()
+    // initialize glfw
+    if (!glfwInit())
+        return -1;
+
+    // create glfw window
+    GLFWwindow* window = glfwCreateWindow(res, res, "Fluid Sim", NULL, NULL);
+    if (!window) {
+        glfwTerminate();
+        return -1;
     }
-    return 0;
+    glfwMakeContextCurrent(window);
+    
+    // main loop
+    dim3 threads(dim, dim);
+    while (!(wiglfwWindowShouldClosendow)) {
+        nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
+        sleep(timestep);
+
+
+        glfwSwapBuffers(window);
+        // for the mouse event
+        glfwPollEvents();
+    }
+    
+    glfwTerminate();
 }
