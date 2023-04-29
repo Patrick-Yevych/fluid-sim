@@ -7,7 +7,11 @@
 #endif
 #include <eigen3/Eigen/Dense>
 
+<<<<<<< HEAD
 #define IND(x, y, d) int((y) * (d) + (x))
+=======
+#define IND(x, y, d) = int((y) * (d) + (x))
+>>>>>>> cb4bbb3c67a2ff1570555fa6f59db15f476d82f4
 
 using namespace std;
 using Eigen::Vector2f;
@@ -46,7 +50,8 @@ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
     }
     else {
         // Perform bilinear interpolation.
-        Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i - 1, j-1, dim)];
+
+        Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i - 1, j - 1, dim)];
 
         Vector2f f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i + 1, j - 1, dim)];
 
@@ -88,10 +93,10 @@ Vector2f gradient(
     if (i < 0 || i >= dim || j < 0 || j >= dim)
         return Vector2f::Zero();
 
-    float pL = (i - 1 < 0) ? 0 : p[IND(i - 1, j, dim)];
-    float pR = (i + 1 >= dim) ? 0 : p[IND(i + 1, j, dim)];
-    float pB = (j - 1 < 0) ? 0 : p[IND(i, j - 1, dim)];
-    float pT = (j + 1 >= dim) ? 0 : p[IND(i, j + 1, dim)];
+    float pL = (i - 1 < 0) ? Vector2f::Zero() : p[IND(i - 1, j, dim)];
+    float pR = (i + 1 >= dim) ? Vector2f::Zero() : p[IND(i + 1, j, dim)];
+    float pB = (j - 1 < 0) ? Vector2f::Zero() : p[IND(i, j - 1, dim)];
+    float pT = (j + 1 >= dim) ? Vector2f::Zero() : p[IND(i, j + 1, dim)];
 
     return halfrdx * Vector2f(pR - pL, pT - pB);
 }
