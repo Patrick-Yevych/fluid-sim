@@ -24,7 +24,10 @@ T* initScalarField(unsigned dim) {
     return ret;
 }
 
-
+/***
+ * Bilinear Interpolation
+ * https://en.wikipedia.org/wiki/Bilinear_interpolation
+ */
 __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
     int i = (int)pos(0);
     int j = (int)pos(1);
