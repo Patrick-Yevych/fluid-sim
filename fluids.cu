@@ -55,7 +55,7 @@ __device__ float divergence(
     int i = x(0);
     int j = x(1);
     if (i < 0 || i >= dim || j < 0 || j >= dim)
-        return Vector2f::Zero();
+        return 0;
 
     Vector2f wL = (i - 1 < 0) ? Vector2f::Zero() : from[IND(i - 1, j, dim)];
     Vector2f wR = (i + 1 >= dim) ? Vector2f::Zero() : from[IND(i + 1, j, dim)];
