@@ -1,6 +1,7 @@
 #include <iostream>
 #include <math.h>
 #include <eigen3/Eigen/Dense>
+#include <GLFW/glfw3.h>
 #include "tinycolormap.hpp"
 
 #if defined(_WIN32)
@@ -9,16 +10,17 @@
     #include <unistd.h> // for sleep function. use window.h for windows.
 #endif
 
-//#include <cuda_runtime.h>
-//#include <cuda_gl_interop.h>
-//#include <helper_cuda.h>
-//#include <helper_functions.h>
+// mouse click location
+Vector2f C;
+// direction and length of mouse drag
+Vector2f F;
 
 #define IND(x, y, d) int((y) * (d) + (x))
 
 using namespace std;
 using Eigen::Vector2f;
 
+Vector2f C((int)(dim / 2), (int)(dim / 2));
 
 template <typename T>
 void initializeField(T **f, T **dev_f, T val, unsigned dim) {
@@ -26,6 +28,21 @@ void initializeField(T **f, T **dev_f, T val, unsigned dim) {
     cudaMalloc(dev_f, dim * dim * sizeof(T));
     for (int i = 0; i < dim*dim; i++) *(*f + i) = val;
     cudaMemcpy(*dev_f, *f, dim * dim * sizeof(T), cudaMemcpyHostToDevice);
+}
+
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    double xpos, ypos, xend, yend, xdir, ydir, len;
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        glfwGetCursorPos(window, &xpos, &ypos);
+        C << (int)xpos, (int)ypos;
+    }
+    else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+        glfwGetCursorPos(window, &xend, &yend);
+        xdir = xend - xpos;
+        ydir = yend - ypos;
+        F = Vector2f(xdir, ydir).normalize();
+    }
 }
 
 
@@ -134,7 +151,7 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float
     float exp = (pow(x(0) - c(0), 2) + pow(x(1) - c(1), 2)) / 2;
     int i = x(0);
     int j = x(1);
-    field[IND(i, j, dim)] = F * pow(timestep, exp);
+    field[IND(i, j, dim)] += F * pow(timestep, exp);
 }
 
 /***
@@ -192,6 +209,7 @@ __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
 
 
 int main(void) {
+
     // quarter of second timestep
     float timestep = 0.25;
     // dimension of vector fields
@@ -205,8 +223,7 @@ int main(void) {
     float viscosity = 1;
 
     // force parameters
-    Vector2f c((int)(dim / 2), (int)(dim / 2));
-    Vector2f F(1, 1);
+    // glfwSetMouseButtonCallback(window, mouse_button_callback);
     float r = 1;
 
     // fluid state representation: 
@@ -224,7 +241,7 @@ int main(void) {
 
     dim3 threads(dim, dim);
     while (true) {
-        nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
+        nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, C, F, timestep, r, dim);
         sleep(timestep);
     }
     return 0;
