@@ -172,7 +172,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vect
     __syncthreads(); //potential redundant; implicit barrier between kernel calls
 }
 
-`
+
 __device__ Vector3f velocityToColor(Vector2f x, Vector2f *u, unsigned dim) {
     tinycolormap::Color color = tinycolormap::GetColor(u[IND(x(0), x(1), dim)].norm(), tinycolormap::ColormapType::Viridis);
 
