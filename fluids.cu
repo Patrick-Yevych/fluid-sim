@@ -76,8 +76,11 @@ __device__ Vector2f divergence(
 }
 
 
+/***
+ * only for computing gradient of p.
+*/
 __device__ Vector2f gradient(
-    Vector2f x, Vector2f* p, Vector2f* w, unsigned dim, float halfax) {
+    Vector2f x, float *p, float halfrdx, unsigned dim) {
     int i = x(0);
     int j = x(1);
 
@@ -89,10 +92,7 @@ __device__ Vector2f gradient(
     float pB = (j - 1 < 0)    ? 0 : p[IND(i, j - 1, dim)];
     float pT = (j + 1 >= dim) ? 0 : p[IND(i, j + 1, dim)];
 
-    uNew = w[IND(i, j, dim)];
-    uNew -= halfrdx * Vector2f(pR - pL, pT - pB);
-
-    return uNew;
+    return halfrdx * Vector2f(pR - pL, pT - pB);
 }
 
 
@@ -155,6 +155,9 @@ __global__ void kernel(Vector2f *u, float *p, float rdx, float viscosity, Vector
     alpha = -1*timestep*timestep;
     beta = 4;
     jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx/2), dim), dim);
+
+    // u = w - nabla p
+    u[IND(x(0), x(1), dim)] -= gradient(x, p, (float)(rdx/2), dim);
 
     return;
 }
