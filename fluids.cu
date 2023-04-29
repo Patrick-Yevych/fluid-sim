@@ -49,7 +49,7 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
     }
 }
 
-__device__ Vector2f divergence(
+__device__ float divergence(
     Vector2f x, Vector2f* from, float halfrdx, unsigned dim)
 {
     int i = x(0);
@@ -62,7 +62,7 @@ __device__ Vector2f divergence(
     Vector2f wB = (j - 1 < 0) ? Vector2f::Zero() : from[IND(i, j - 1, dim)];
     Vector2f wT = (j + 1 <= dim) ? Vector2f::Zero() : from[IND(i, j + 1, dim)];
 
-    return halfrdx * Vector2f(wR(0) - wL(0), wT(1) - wB(1));
+    return halfrdx * (wR(0) - wL(0), wT(1) - wB(1);
 }
 
 
@@ -103,7 +103,7 @@ __device__ void advect(Vector2f x, Vector2f* field, Vector2f* velfield, float ti
  * viscous diffusion of fluid.
 */
 template <typename T>
-__device__ void jacobi(Vector2f x, T* field, float alpha, float beta, Vector2f b, T zero, unsigned dim) {
+__device__ void jacobi(Vector2f x, T* field, float alpha, float beta, T b, T zero, unsigned dim) {
     int i = (int)x(0);
     int j = (int)x(1);
 
