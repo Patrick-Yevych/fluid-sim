@@ -58,8 +58,8 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
 __device__ void divergence(
     Vector2f x, Vector2f* feild, float halfrdx, unsigned dim)
 {
-    i = (int)x(0);
-    j = (int)x(1);
+    int i = x(0);
+    int j = x(1);
     if (i < 0 || i >= dim || j < 0 || j >= dim)
         return Vector2f::Zero();
 
@@ -71,6 +71,24 @@ __device__ void divergence(
     div = halfrdx * ((wR(0) - wL(0))) + (wT(1) - wB(1));
 
     return div;
+}
+
+
+__device__ void gradient(
+    Vector2f x, Vector2f* p, Vector2f* w, unsigned dim, float halfax) {
+    int i = x(0);
+    int j = x(1);
+
+    if (i < 0 || i >= dim || j < 0 || j >= dim)
+        return 0;
+
+    float pL = (i - 1 < 0)    ? 0 : p[IND(i - 1, j, dim)];
+    float pR = (i + 1 >= dim) ? 0 : p[IND(i + 1, j, dim)];
+    float pB = (j - 1 < 0)    ? 0 : p[IND(i, j - 1, dim)];
+    float pT = (j + 1 >= dim) ? 0 : p[IND(i, j + 1, dim)];
+
+    uNew = w[IND(i, j, dim)];
+    uNew -= halfrdx * Vector2f(pR - pL, pT - pB);
 }
 
 
