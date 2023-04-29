@@ -21,6 +21,7 @@
 
 using namespace std;
 using Eigen::Vector2f;
+using Eigen::Vector3f;
 
 // mouse click location
 Vector2f C;
@@ -46,7 +47,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         glfwGetCursorPos(window, &xend, &yend);
         xdir = xend - xpos;
         ydir = yend - ypos;
-        F = Vector2f(xdir, ydir).normalize();
+        F = Vector2f(xdir, ydir).normalized();
     }
 }
 
@@ -220,6 +221,27 @@ __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
                                     tinycolormap::ColormapType::Viridis);
 }
 
+// render points using VBO
+void renderPointsVBO(GLuint vbo, int num_points) {
+    // Bind the VBO
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    // Set up vertex attribute pointer
+    glVertexPointer(3, GL_FLOAT, 0, NULL);
+    glEnableClientState(GL_VERTEX_ARRAY);
+
+    // Set point size and color
+    glPointSize(3.0f);
+    glColor3f(1.0f, 0.0f, 0.0f);
+
+    // Draw the points using the VBO
+    glDrawArrays(GL_POINTS, 0, num_points);
+
+    // Disable the vertex attribute pointer and unbind the VBO
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 int main(void) {
 
     // quarter of second timestep
@@ -265,9 +287,20 @@ int main(void) {
     glfwMakeContextCurrent(window);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
 
+    // Create a VBO for the points (Vector3f*)
+    GLuint vbo;
+    // Generate a VBO handle
+    glGenBuffers(1, vbo);
+    // Bind the VBO
+    glBindBuffer(GL_ARRAY_BUFFER, *vbo);
+    // Copy data to the VBO
+    glBufferData(GL_ARRAY_BUFFER, num_of_points * sizeof(Vector3), *(uc[0]), GL_STATIC_DRAW);
+    // Unbind the VBO
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
     // main loop
     dim3 threads(dim, dim);
-    while (!(glfwWindowShouldClose)) {
+    while (!(glfwWindowShouldClose(window))) {
         nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
         cudaDeviceSynchronize();
         clrkernel<<<1, threads>>>(dev_uc, dev_u, dim);
@@ -277,10 +310,19 @@ int main(void) {
 
         decayForce();
 
+        // Clear the screen
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // Render the points using VBO
+        renderPointsVBO(vbo, points.size());
+
+        // update screen
         glfwSwapBuffers(window);
         // for the mouse event
         glfwPollEvents();
     }
-    
+
+    // Cleanup
+    glDeleteBuffers(1, &vbo);
     glfwTerminate();
 }
