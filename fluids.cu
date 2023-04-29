@@ -72,7 +72,7 @@ __device__ Vector2f divergence(
 }
 
 
-__device__ void gradient(
+__device__ Vector2f gradient(
     Vector2f x, Vector2f* p, Vector2f* w, unsigned dim, float halfax) {
     int i = x(0);
     int j = x(1);
@@ -87,6 +87,8 @@ __device__ void gradient(
 
     uNew = w[IND(i, j, dim)];
     uNew -= halfrdx * Vector2f(pR - pL, pT - pB);
+
+    return uNew;
 }
 
 
