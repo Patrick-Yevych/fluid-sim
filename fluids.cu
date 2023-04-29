@@ -173,9 +173,8 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vect
 }
 
 
-__device__ Vector3f getColor(Vector2f x, double val) {
-    tinycolormap::Color color = tinycolormap::GetColor(val, tinycolormap::ColormapType::Viridis);
-
+__device__ Vector3f getColor(Vector2f x, double val, tinycolormap::ColormapType type) {
+    tinycolormap::Color color = tinycolormap::GetColor(val, type);
     Vector3f ret(color.r(), color.g(), color.b());
     return ret;
 }
@@ -186,7 +185,9 @@ __device__ Vector3f getColor(Vector2f x, double val) {
 */
 __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
     Vector2f x(threadIdx.x, threadIdx.y);
-    uc[IND(x(0), x(1), dim)] = getColor(x, (double)u[IND(x(0), x(1), dim)].norm());
+    uc[IND(x(0), x(1), dim)] = getColor(x, 
+                                    (double)u[IND(x(0), x(1), dim)].norm(), 
+                                    tinycolormap::ColormapType::Viridis);
 }
 
 
