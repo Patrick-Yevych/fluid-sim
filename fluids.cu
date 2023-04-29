@@ -18,7 +18,16 @@
 
 using namespace std;
 using Eigen::Vector2f;
-using Eigen::Vector2d;
+
+
+template <typename T>
+void initializeField(T **f, T **dev_f, T val, unsigned dim) {
+    *f = (T *)malloc(dim * dim * sizeof(T));
+    cudaMalloc(dev_f, dim * dim * sizeof(T));
+    for (int i = 0; i < dim*dim; i++) *(*f + i) = val;
+    cudaMemcpy(*dev_f, *f, dim * dim * sizeof(T), cudaMemcpyHostToDevice);
+}
+
 
 /***
  * Bilinear Interpolation
@@ -178,23 +187,13 @@ int main(void) {
     Vector2f F(1, 1);
     float r = 1;
 
-    // half to alloc cpu/ram side u and p, then copy it to device/gpu side u, p.
-    // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html
-    Vector2f *velocity = (Vector2f *)malloc(dim * dim * sizeof(Vector2f));
-    float *pressure = (float *)malloc(dim * dim * sizeof(float));
+    // fluid state representation: 
+    // velocity vector field (u) and pressure scalar field (p).
+    Vector2f *u, *dev_u;
+    float *p, *dev_p;
 
-    Vector2f *dev_velocity; // u
-    cudaMalloc(&dev_velocity, dim * dim * sizeof(Vector2f));
-    float *dev_pressure;
-    cudaMalloc(&dev_pressure, dim * dim * sizeof(float));
-
-    for (int i = 0; i < dim * dim; i++) {
-        velocity[i] = Vector2f::Zero();
-        pressure[i] = 0;
-    }
-
-    cudaMemcpy(dev_velocity, velocity, dim*dim*sizeof(Vector2f), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_pressure, pressure, dim * dim * sizeof(float), cudaMemcpyHostToDevice);
+    initializeField<Vector2f>(&u, &dev_u, Vector2f::Zero(), dim);
+    initializeField<float>(&p, &dev_p, 0, dim);
 
     dim3 threads(dim, dim);
     while (true) {
