@@ -6,12 +6,23 @@
 using namespace std;
 using namespace Eigen;
 
-__device__ Vector2f* initializeField(unsigned dim) {
-    Vector2f *ret;
-    cudaMalloc(&ret, dim*dim);
-    for (int i = 0; i < dim*dim; i++) ret[i] << 0, 0;
+template <typename T>
+T* initVectorField(unsigned dim) {
+    T *ret;
+    cudaMalloc(&ret, dim*dim*sizeof(T));
+    cudaMemset(ret, T::Zero(), dim*dim);
     return ret;
 }
+
+template <typename T>
+T* initScalarField(unsigned dim) {
+    T *ret;
+    cudaMalloc(&ret, dim*dim*sizeof(T));
+    cudaMemset(ret, (T)0, dim*dim);
+    return ret;
+}
+
+
 
 __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
     int i = (int)pos(0);
@@ -39,6 +50,16 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
     field[IND(x(0), x(1), dim)] = bilerp(pos, field, dim);
 }
 
+__global__ void kernel(void) {
+    return;
+}
+
 int main(void) {
+    unsigned dim = 1024;
+    
+    Vector2f *dev_velocity = initVectorField<Vector2f>(dim);
+    float *dev_pressure = initScalarField<float>(dim);
+
+    kernel<<<1, dim>>>();
     return 0;
 }
