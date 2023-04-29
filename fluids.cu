@@ -271,6 +271,9 @@ int main(void) {
         nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
 
         clrkernel<<<1, threads>>>(dev_uc, dev_u, dim);
+
+        cudaMemcpy(*uc, *dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
+
         decayForce();
 
         glfwSwapBuffers(window);
