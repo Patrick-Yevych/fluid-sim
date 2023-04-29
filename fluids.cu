@@ -1,6 +1,7 @@
 #include <iostream>
 #include <math.h>
 #include <eigen3/Eigen/Dense>
+#include <GLFW/glfw3.h>
 #include "tinycolormap.hpp"
 
 #if defined(_WIN32)
@@ -9,16 +10,22 @@
     #include <unistd.h> // for sleep function. use window.h for windows.
 #endif
 
-//#include <cuda_runtime.h>
-//#include <cuda_gl_interop.h>
-//#include <helper_cuda.h>
-//#include <helper_functions.h>
+#define TIMESTEP 0.25
+#define DIM 1024
+#define RES 1024
+#define VISCOSITY 1
+#define RADIUS 1
+#define DECAY_RATE 0.01
 
 #define IND(x, y, d) int((y) * (d) + (x))
 
 using namespace std;
 using Eigen::Vector2f;
 
+// mouse click location
+Vector2f C;
+// direction and length of mouse drag
+Vector2f F;
 
 template <typename T>
 void initializeField(T **f, T **dev_f, T val, unsigned dim) {
@@ -26,6 +33,30 @@ void initializeField(T **f, T **dev_f, T val, unsigned dim) {
     cudaMalloc(dev_f, dim * dim * sizeof(T));
     for (int i = 0; i < dim*dim; i++) *(*f + i) = val;
     cudaMemcpy(*dev_f, *f, dim * dim * sizeof(T), cudaMemcpyHostToDevice);
+}
+
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    double xpos, ypos, xend, yend, xdir, ydir, len;
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        glfwGetCursorPos(window, &xpos, &ypos);
+        C << (int)xpos, (int)ypos;
+    }
+    else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+        glfwGetCursorPos(window, &xend, &yend);
+        xdir = xend - xpos;
+        ydir = yend - ypos;
+        F = Vector2f(xdir, ydir).normalize();
+    }
+}
+
+
+void decayForce() {
+    float nx = F(0) - DECAY_RATE;
+    float ny = F(1) - DECAY_RATE;
+    nx = (nx > 0) ? nx : 0;
+    ny = (ny > 0) > ny : 0;
+    F << nx, ny;
 }
 
 
@@ -134,7 +165,7 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float
     float exp = (pow(x(0) - c(0), 2) + pow(x(1) - c(1), 2)) / 2;
     int i = x(0);
     int j = x(1);
-    field[IND(i, j, dim)] = F * pow(timestep, exp);
+    field[IND(i, j, dim)] += F * pow(timestep, exp);
 }
 
 /***
@@ -190,22 +221,24 @@ __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
 }
 
 int main(void) {
+
     // quarter of second timestep
-    float timestep = 0.25;
+    float timestep = TIMESTEP;
     // dimension of vector fields
-    unsigned dim = 1024;
+    unsigned dim = DIM;
     // resolution of display
-    unsigned res = 1024;
+    unsigned res = RES;
     // how many pixels a cell of the vector field represents
     float rdx = res / dim;
 
     // fluid parameters
-    float viscosity = 1;
+    float viscosity = VISCOSITY;
 
     // force parameters
-    Vector2f c((int)(dim / 2), (int)(dim / 2));
-    Vector2f F(1, 1);
-    float r = 1;
+    // glfwSetMouseButtonCallback(window, mouse_button_callback);
+    C = Vector2f::Zero();
+    F = Vector2f::Zero();
+    float r = RADIUS;
 
     // fluid state representation: 
     // velocity vector field (u) and pressure scalar field (p).
