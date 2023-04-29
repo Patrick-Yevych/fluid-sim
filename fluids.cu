@@ -5,19 +5,19 @@
 #else
 #include <unistd.h> // for sleep function. use window.h for windows.
 #endif
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
-#define IND(x, y, d) = int((y) * (d) + (x)))
+#define IND(x, y, d) int((y) * (d) + (x))
 
 using namespace std;
 using Eigen::Vector2f;
 
 
 template <typename T>
-T* initVectorField(unsigned dim) {
+T* initVectorField(unsigned dim, T zero) {
     T* ret;
     cudaMalloc(&ret, dim * dim * sizeof(T));
-    cudaMemset(ret, T::Zero(), dim * dim);
+    cudaMemset(ret, zero, dim * dim);
     return ret;
 }
 
@@ -46,7 +46,7 @@ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
     }
     else {
         // Perform bilinear interpolation.
-        Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[int((j - 1) * dim + i - 1)];
+        Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i - 1, j-1, dim)];
 
         Vector2f f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i + 1, j - 1, dim)];
 
@@ -114,17 +114,17 @@ void advect(Vector2f x, Vector2f* field, Vector2f* velfield, float timestep, flo
  * viscous diffusion of fluid.
 */
 template <typename T>
-void jacobi(Vector2f x, T* field, float alpha, float beta, Vector2f b, unsigned dim) {
+void jacobi(Vector2f x, T* field, float alpha, float beta, Vector2f b, T zero, unsigned dim) {
     int i = (int)x(0);
     int j = (int)x(1);
 
-    T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i - 1, j - 1, dim)];
+    T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero: field[IND(i - 1, j - 1, dim)];
 
-    T f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i + 1, j - 1, dim)];
+    T f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(i + 1, j - 1, dim)];
 
-    T f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i - 1, j + 1, dim)];
+    T f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(i - 1, j + 1, dim)];
 
-    T f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i + 1, j + 1, dim)];
+    T f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(i + 1, j + 1, dim)];
 
     field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + alpha * b) / beta;
 }
@@ -132,10 +132,12 @@ void jacobi(Vector2f x, T* field, float alpha, float beta, Vector2f b, unsigned 
 
 void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float timestep, float r, unsigned dim) {
     float exp = (pow(x(0) - c(0), 2) + pow(x(1) - c(1), 2)) / 2;
+    int i = x(0);
+    int j = x(1);
     field[IND(i, j, dim)] = F * pow(timestep, exp);
 }
 
-void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, float timestep, float r, unsigned dim)
+void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, int timestep, float r, unsigned dim)
 {
     Vector2f x(threadIdx.x, threadIdx.y);
 
@@ -145,7 +147,9 @@ void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vecto
     //diffusion
     float alpha = (rdx * rdx) / (viscosity * timestep);
     float beta = 4 + alpha;
-    jacobi<Vector2f>(x, u, alpha, beta, u[IND(i, j, dim)], dim);
+    int i = x(0);
+    int j = x(1);
+    jacobi<Vector2f>(x, u, alpha, beta, u[IND(i, j, dim)], Vector2f::Zero(), dim);
 
     //force application
     // apply force every 10 seconds
@@ -155,7 +159,7 @@ void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vecto
     //pressure
     alpha = -1 * timestep * timestep;
     beta = 4;
-    jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx / 2), dim), dim);
+    jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx / 2), dim), 0, dim);
 
     // u = w - nabla p
     u[IND(x(0), x(1), dim)] -= gradient(x, p, (float)(rdx / 2), dim);
@@ -179,7 +183,7 @@ int main(void) {
     Vector2f F(1, 1);
     float r = 1;
 
-    Vector2f* dev_velocity = initVectorField<Vector2f>(dim); //u
+    Vector2f* dev_velocity = initVectorField<Vector2f>(dim, Vector2f::Zero()); //u
     float* dev_pressure = initScalarField<float>(dim);
 
     // Iterate
@@ -196,10 +200,10 @@ int main(void) {
 
     */
 
-    dim3 block(dim, dim);
+    dim3 threads(dim, dim);
 
     while (true) {
-        kernel << <1, block >> > (dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
+        kernel << <1, threads >> > (dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
         sleep(timestep);
     }
     return 0;
