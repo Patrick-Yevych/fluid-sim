@@ -6,6 +6,7 @@
 using namespace std;
 using namespace Eigen;
 
+
 template <typename T>
 T* initVectorField(unsigned dim) {
     T *ret;
@@ -13,6 +14,7 @@ T* initVectorField(unsigned dim) {
     cudaMemset(ret, T::Zero(), dim*dim);
     return ret;
 }
+
 
 template <typename T>
 T* initScalarField(unsigned dim) {
@@ -22,8 +24,10 @@ T* initScalarField(unsigned dim) {
     return ret;
 }
 
-
-
+/***
+ * Bilinear Interpolation
+ * https://en.wikipedia.org/wiki/Bilinear_interpolation
+ */
 __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
     int i = (int)pos(0);
     int j = (int)pos(1);
@@ -72,9 +76,25 @@ __device__ Vector2f next_diffusion(Vector2f x, float dx,  float nu, float dt, un
     x_next /= (4 + alpha);
 }
 
+
+/***
+ * x is the coordinate/position vector following notation of chp 38.
+ * velfield is u, the velocity field as of the current time quanta.
+ * field is the current field being updated.
+*/
 __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float timestep, float rdx, unsigned dim) {
     Vector2f pos = x - timestep*rdx*velfield[IND(x(0), x(1), dim)];
     field[IND(x(0), x(1), dim)] = bilerp(pos, field, dim);
+}
+
+
+__device__ void jacobi(Vector2f x, Vector2f *field, float alpha, float beta, Vector2f b) {
+    Vector2f f00 = field[IND(x - 1, y - 1, dim)];
+    Vector2f f01 = field[IND(x + 1, y - 1, dim)];
+    Vector2f f10 = field[IND(x - 1, y + 1, dim)];
+    Vector2f f11 = field[IND(x + 1, y + 1, dim)];
+
+    return (f00 + f01 + f10 + f11 + alpha*b) / beta;
 }
 
 __global__ void kernel(void) {
@@ -82,7 +102,12 @@ __global__ void kernel(void) {
 }
 
 int main(void) {
+    // dimension of vector fields
     unsigned dim = 1024;
+    // resolution of display
+    unsigned res = 1024;
+    // how many pixels a cell of the vector field represents
+    float rdx = res / dim;
     
     Vector2f *dev_velocity = initVectorField<Vector2f>(dim);
     float *dev_pressure = initScalarField<float>(dim);
