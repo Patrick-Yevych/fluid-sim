@@ -137,7 +137,10 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float
     field[IND(i, j, dim)] = F * pow(timestep, exp);
 }
 
-__global__ void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, int timestep, float r, unsigned dim)
+/***
+ * Navier-Stokes computation kernel.
+*/
+__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, int timestep, float r, unsigned dim)
 {
     Vector2f x(threadIdx.x, threadIdx.y);
 
@@ -169,6 +172,24 @@ __global__ void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector
     __syncthreads(); //potential redundant; implicit barrier between kernel calls
 }
 
+
+__device__ Vector3f velocityToColor(Vector2f x, Vector2f *u, unsigned dim) {
+    tinycolormap::Color color = tinycolormap::GetColor(u[IND(x(0), x(1), dim)].norm(), tinycolormap::ColormapType::Viridis);
+
+    Vector3f ret(color.r(), color.g(), color.b());
+    return ret;
+}
+
+
+/***
+ * color mapping kernel.
+*/
+__global__ void clrkernel(Vector2f *u, unsigned dim) {
+    Vector2f x(threadIdx.x, threadIdx.y);
+    velocityToColor(x, u, dim);
+}
+
+
 int main(void) {
     // quarter of second timestep
     float timestep = 0.25;
@@ -197,7 +218,7 @@ int main(void) {
 
     dim3 threads(dim, dim);
     while (true) {
-        kernel << <1, threads >> > (dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
+        nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
         sleep(timestep);
     }
     return 0;
