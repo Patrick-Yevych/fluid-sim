@@ -7,6 +7,11 @@
 #endif
 #include <eigen3/Eigen/Dense>
 
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
+#include <helper_cuda.h>
+#include <helper_functions.h>
+
 #define IND(x, y, d) int((y) * (d) + (x))
 
 using namespace std;
@@ -121,7 +126,7 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float
     field[IND(i, j, dim)] = F * pow(timestep, exp);
 }
 
-void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, int timestep, float r, unsigned dim)
+__global__ void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, int timestep, float r, unsigned dim)
 {
     Vector2f x(threadIdx.x, threadIdx.y);
 
