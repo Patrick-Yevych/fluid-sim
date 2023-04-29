@@ -11,6 +11,7 @@
 
 using namespace std;
 using Eigen::Vector2f;
+using Eigen::Vector2d;
 
 /***
  * Bilinear Interpolation
@@ -71,10 +72,10 @@ __device__ Vector2f gradient(
     if (i < 0 || i >= dim || j < 0 || j >= dim)
         return Vector2f::Zero();
 
-    float pL = (i - 1 < 0) ? Vector2f::Zero() : p[IND(i - 1, j, dim)];
-    float pR = (i + 1 >= dim) ? Vector2f::Zero() : p[IND(i + 1, j, dim)];
-    float pB = (j - 1 < 0) ? Vector2f::Zero() : p[IND(i, j - 1, dim)];
-    float pT = (j + 1 >= dim) ? Vector2f::Zero() : p[IND(i, j + 1, dim)];
+    float pL = (i - 1 < 0)    ? 0 : p[IND(i - 1, j, dim)];
+    float pR = (i + 1 >= dim) ? 0 : p[IND(i + 1, j, dim)];
+    float pB = (j - 1 < 0)    ? 0 : p[IND(i, j - 1, dim)];
+    float pT = (j + 1 >= dim) ? 0 : p[IND(i, j + 1, dim)];
 
     return halfrdx * Vector2f(pR - pL, pT - pB);
 }
@@ -101,7 +102,7 @@ __device__ void jacobi(Vector2f x, T* field, float alpha, float beta, Vector2f b
     int i = (int)x(0);
     int j = (int)x(1);
 
-    T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero: field[IND(i - 1, j - 1, dim)];
+    T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(i - 1, j - 1, dim)];
 
     T f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(i + 1, j - 1, dim)];
 
