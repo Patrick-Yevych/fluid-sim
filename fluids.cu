@@ -235,7 +235,6 @@ int main(void) {
     float viscosity = VISCOSITY;
 
     // force parameters
-    // glfwSetMouseButtonCallback(window, mouse_button_callback);
     C = Vector2f::Zero();
     F = Vector2f::Zero();
     float r = RADIUS;
@@ -264,13 +263,15 @@ int main(void) {
         return -1;
     }
     glfwMakeContextCurrent(window);
-    
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+
     // main loop
     dim3 threads(dim, dim);
-    while (!(wiglfwWindowShouldClosendow)) {
+    while (!(glfwWindowShouldClose)) {
         nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
-        sleep(timestep);
 
+        clrkernel<<<1, threads>>>(dev_uc, dev_u, dim);
+        decayForce();
 
         glfwSwapBuffers(window);
         // for the mouse event
