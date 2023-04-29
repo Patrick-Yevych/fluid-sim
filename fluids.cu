@@ -178,20 +178,20 @@ int main(void) {
 
     // half to alloc cpu/ram side u and p, then copy it to device/gpu side u, p.
     // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html
-    Vector2f *velocity = (Vector2f *)malloc(dim * dim * sizeof(Vector2d));
+    Vector2f *velocity = (Vector2f *)malloc(dim * dim * sizeof(Vector2f));
     float *pressure = (float *)malloc(dim * dim * sizeof(float));
 
     Vector2f *dev_velocity; // u
-    cudaMalloc(&dev_velocity, dim * dim * sizeof(Vector2d));
+    cudaMalloc(&dev_velocity, dim * dim * sizeof(Vector2f));
     float *dev_pressure;
     cudaMalloc(&dev_pressure, dim * dim * sizeof(float));
 
     for (int i = 0; i < dim * dim; i++) {
-        velocity[i] = Vector2d::Zero();
+        velocity[i] = Vector2f::Zero();
         pressure[i] = 0;
     }
 
-    cudaMemcpy(dev_velocity, velocity, dim*dim*sizeof(Vector2d), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_velocity, velocity, dim*dim*sizeof(Vector2f), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_pressure, pressure, dim * dim * sizeof(float), cudaMemcpyHostToDevice);
 
     dim3 threads(dim, dim);
