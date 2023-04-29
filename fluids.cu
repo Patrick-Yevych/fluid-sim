@@ -49,31 +49,22 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
     }
 }
 
-__device__ Vector2f next_poisson(float x, float b, float dx, unsigned dim) {
-    // TODO: skeleton code; not tested
-    int i = (int)pos(0);
-    int j = (int)pos(1);
-    float x_next = 0;
-    x_next += (i - 1 < 0 || i - 1 >= dim || j < 0 || j >= dim) ? 0 : x[IND(i - 1, j, dim)];
-    x_next += (i + 1 < 0 || i + 1 >= dim || j < 0 || j >= dim) ? 0 : x[IND(i + 1, j, dim)];
-    x_next += (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : x[IND(i, j - 1, dim)];
-    x_next += (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : x[IND(i, j + 1, dim)];
-    x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? 0 : -dx*dx*b[IND(i, j, dim)];
-    x_next /= 4;
-}
+__device__ void divergence(
+    Vector2f x, Vector2f* feild, Vector2f halfrdx, unsigned dim)
+{
+    i = (int)x(0);
+    j = (int)x(1);
+    if (i < 0 || i >= dim || j < 0 || j >= dim)
+        return Vector2f::Zero();
 
-__device__ Vector2f next_diffusion(Vector2f x, float dx,  float nu, float dt, unsigned dim) {
-    // TODO: skeleton code; not tested
-    int i = (int)pos(0);
-    int j = (int)pos(1);
-    Vector2f x_next = 0;
-    float alpha = delta_x*delta_x/nu/dt;
-    x_next += (i - 1 < 0 || i - 1 >= dim || j < 0 || j >= dim) ? 0 : x[IND(i - 1, j, dim)];
-    x_next += (i + 1 < 0 || i + 1 >= dim || j < 0 || j >= dim) ? 0 : x[IND(i + 1, j, dim)];
-    x_next += (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : x[IND(i, j - 1, dim)];
-    x_next += (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : x[IND(i, j + 1, dim)];
-    x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? 0 : -delta_x*delta_x*x[IND(i, j, dim)];
-    x_next /= (4 + alpha);
+    Vector2f wL = (i - 1 < 0)    ? Vector2f::Zero() : field[IND(i - 1, j, dim)];
+    Vector2f wR = (i + 1 >= dim) ? Vector2f::Zero() : field[IND(i + 1, j, dim)];
+    Vector2f wB = (j - 1 < 0)    ? Vector2f::Zero() : field[IND(i, j - 1, dim)];
+    Vector2f wT = (j + 1 <= dim) ? Vector2f::Zero() : field[IND(i, j + 1, dim)];
+
+    div = halfrdx * ((wR(0) - wL(0))) + (wT(1) - wB(1)));
+
+    return div;
 }
 
 
@@ -86,7 +77,6 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
     Vector2f pos = x - timestep*rdx*velfield[IND(x(0), x(1), dim)];
     field[IND(x(0), x(1), dim)] = bilerp(pos, field, dim);
 }
-
 
 __device__ void jacobi(Vector2f x, Vector2f *field, float alpha, float beta, Vector2f b) {
     Vector2f f00 = field[IND(x - 1, y - 1, dim)];
@@ -114,8 +104,16 @@ int main(void) {
 
     // Iterate
     /*
-    next_poisson(p, div_w, dx, dim);
-    next_diffusion(u, dx, nu, dt, dim);
+    u = advect(u);
+    u = next_diffusion(u, dx, nu, dt, dim);
+    u = addForces(u);
+
+    // Now apply the projection operator to the result.
+    p = next_poisson(p, div_w, dx, dim);
+    u = subtractPressureGradient(u, p);
+
+    
+    
     */
 
     kernel<<<1, dim>>>();
