@@ -135,6 +135,7 @@ int main(void) {
     
     */
 
-    kernel<<<1, dim>>>();
+    dim3 block(dim, dim);
+    kernel<<<1, block>>>();
     return 0;
 }
