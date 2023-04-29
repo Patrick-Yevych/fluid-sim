@@ -51,6 +51,15 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 }
 
 
+void decayForce() {
+    float nx = F(0) - DECAY_RATE;
+    float ny = F(1) - DECAY_RATE;
+    nx = (nx > 0) ? nx : 0;
+    ny = (ny > 0) > ny : 0;
+    F << nx, ny;
+}
+
+
 /***
  * Bilinear Interpolation
  * https://en.wikipedia.org/wiki/Bilinear_interpolation
@@ -250,6 +259,7 @@ int main(void) {
     while (true) {
         nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, C, F, timestep, r, dim);
         sleep(timestep);
+        // decayForce()
     }
     return 0;
 }
