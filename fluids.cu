@@ -7,32 +7,10 @@
 #endif
 #include <eigen3/Eigen/Dense>
 
-<<<<<<< HEAD
 #define IND(x, y, d) int((y) * (d) + (x))
-=======
-#define IND(x, y, d) = int((y) * (d) + (x))
->>>>>>> cb4bbb3c67a2ff1570555fa6f59db15f476d82f4
 
 using namespace std;
 using Eigen::Vector2f;
-
-
-template <typename T>
-T* initVectorField(unsigned dim, T zero) {
-    T* ret;
-    cudaMalloc(&ret, dim * dim * sizeof(T));
-    cudaMemset(ret, zero, dim * dim);
-    return ret;
-}
-
-
-template <typename T>
-T* initScalarField(unsigned dim) {
-    T* ret;
-    cudaMalloc(&ret, dim * dim * sizeof(T));
-    cudaMemset(ret, (T)0, dim * dim);
-    return ret;
-}
 
 /***
  * Bilinear Interpolation
@@ -148,26 +126,30 @@ void kernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vecto
 
     //advection
     advect(x, u, u, timestep, rdx, dim);
-
+    __syncthreads(); // barrier
     //diffusion
     float alpha = (rdx * rdx) / (viscosity * timestep);
     float beta = 4 + alpha;
     int i = x(0);
     int j = x(1);
     jacobi<Vector2f>(x, u, alpha, beta, u[IND(i, j, dim)], Vector2f::Zero(), dim);
+    __syncthreads();
 
     //force application
     // apply force every 10 seconds
     if (timestep % 10 == 0)
         force(x, u, c, F, timestep, r, dim);
+    __syncthreads();
 
     //pressure
     alpha = -1 * timestep * timestep;
     beta = 4;
     jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx / 2), dim), 0, dim);
+    __syncthreads();
 
     // u = w - nabla p
     u[IND(x(0), x(1), dim)] -= gradient(x, p, (float)(rdx / 2), dim);
+    __syncthreads(); //potential redundant; implicit barrier between kernel calls
 }
 
 int main(void) {
@@ -188,25 +170,25 @@ int main(void) {
     Vector2f F(1, 1);
     float r = 1;
 
-    Vector2f* dev_velocity = initVectorField<Vector2f>(dim, Vector2f::Zero()); //u
-    float* dev_pressure = initScalarField<float>(dim);
+    // half to alloc cpu/ram side u and p, then copy it to device/gpu side u, p.
+    // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html
+    Vector2f *velocity = (Vector2f *)malloc(dim * dim * sizeof(Vector2d));
+    float *pressure = (float *)malloc(dim * dim * sizeof(float));
 
-    // Iterate
-    /*
-    u = advect(u);
-    u = next_diffusion(u, dx, nu, dt, dim);
-    u = addForces(u);
+    Vector2f *dev_velocity; // u
+    cudaMalloc(&dev_velocity, dim * dim * sizeof(Vector2d));
+    float *dev_pressure;
+    cudaMalloc(&dev_pressure, dim * dim * sizeof(float));
 
-    // Now apply the projection operator to the result.
-    p = next_poisson(p, div_w, dx, dim);
-    u = subtractPressureGradient(u, p);
+    for (int i = 0; i < dim * dim; i++) {
+        velocity[i] = Vector2d::Zero();
+        pressure[i] = 0;
+    }
 
-
-
-    */
+    cudaMemcpy(dev_velocity, velocity, dim*dim*sizeof(Vector2d), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_pressure, pressure, dim * dim * sizeof(float), cudaMemcpyHostToDevice);
 
     dim3 threads(dim, dim);
-
     while (true) {
         kernel << <1, threads >> > (dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
         sleep(timestep);
