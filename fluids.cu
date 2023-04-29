@@ -53,7 +53,8 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
     }
 }
 
-__device__ void divergence(Vector2f x, Vector2f* feild, Vector2f halfrdx, unsigned dim)
+__device__ void divergence(
+    Vector2f x, Vector2f* feild, float halfrdx, unsigned dim)
 {
     i = (int)x(0);
     j = (int)x(1);
