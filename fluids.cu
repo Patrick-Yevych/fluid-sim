@@ -1,4 +1,6 @@
 #include <iostream>
+#include <math.h>
+#include <unistd.h> // for sleep function. use window.h for windows.
 #include <Eigen/Dense>
 
 #define IND(x, y, d) = ((int)((y * d) + x))
@@ -104,23 +106,45 @@ __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T *b, unsi
     field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + alpha*b[IND(i, j, dim)]) / beta;
 }
 
-__global__ void kernel(Vector2f *u, Vector2f *p, float timestep, float rdx, float dim, float viscosity) {
+
+__device__ void force(Vector2f x, Vector2f *field, Vector2f c, Vector2f F, float timestep, float r, unsigned dim) {
+    float exp = (pow(x(0)-c(0), 2) + pow(x(1)-c(1), 2)) / 2;
+    field[IND(i, j, dim)] = F*pow(timestep, exp);
+}
+
+__global__ void kernel(Vector2f *u, Vector2f *p, float rdx, float viscosity, Vector2f c, Vector2f F, float timestep, float r, unsigned dim)
+{
     Vector2f x(threadIdx.x, threadIdx.y);
+    //advection
     advect(x, u, u, timestep, rdx, dim);
     //diffusion
     float alpha = (rdx*rdx)/(viscosity*timestep), beta = 4 + alpha;
     jacobi<Vector2f>(x, u, alpha, beta, u, dim);
+    //force application
+    // apply force every 10 seconds
+    if (timestep % 10 == 0)
+        force(x, u, c, F, timestep, r, dim);
 
     return;
 }
 
 int main(void) {
+    // quarter of second timestep
+    float timestep = 0.25;
     // dimension of vector fields
     unsigned dim = 1024;
     // resolution of display
     unsigned res = 1024;
     // how many pixels a cell of the vector field represents
     float rdx = res / dim;
+
+    // fluid parameters
+    float viscosity = 1;
+
+    // force parameters
+    Vector2f c((int)(dim/2), (int)(dim/2));
+    Vector2f F(1, 1);
+    float r = 1;
     
     Vector2f *dev_velocity = initVectorField<Vector2f>(dim); //u
 
@@ -142,6 +166,10 @@ int main(void) {
     */
 
     dim3 block(dim, dim);
-    kernel<<<1, block>>>();
+
+    while (true) {
+        kernel<<<1, block>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
+        sleep(timestep);
+    }
     return 0;
 }
