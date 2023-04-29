@@ -39,43 +39,19 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
         return Vector2f::Zero();
     } else {
         // Perform bilinear interpolation.
-        Vector2f f00 = field[IND(x-1, y-1, dim)];
-        Vector2f f01 = field[IND(x+1, y-1, dim)];
-        Vector2f f10 = field[IND(x-1, y+1, dim)];
-        Vector2f f11 = field[IND(x+1, y+1, dim)];
+        Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i - 1, j - 1, dim)];
+
+        Vector2f f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i + 1, j - 1, dim)];
+
+        Vector2f f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i - 1, j + 1, dim)];
+
+        Vector2f f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i + 1, j + 1, dim)];
+
         Vector2f f0 = (1 - dx) * f00 + dx * f10;
         Vector2f f1 = (1 - dx) * f01 + dx * f11;
         return (1 - dy) * f0 + dy * f1;
     }
 }
-
-__device__ Vector2f next_poisson(float x, float b, float dx, unsigned dim) {
-    // TODO: skeleton code; not tested
-    int i = (int)pos(0);
-    int j = (int)pos(1);
-    float x_next = 0;
-    x_next += (i - 1 < 0 || i - 1 >= dim || j < 0 || j >= dim) ? 0 : x[IND(i - 1, j, dim)];
-    x_next += (i + 1 < 0 || i + 1 >= dim || j < 0 || j >= dim) ? 0 : x[IND(i + 1, j, dim)];
-    x_next += (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : x[IND(i, j - 1, dim)];
-    x_next += (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : x[IND(i, j + 1, dim)];
-    x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? 0 : -dx*dx*b[IND(i, j, dim)];
-    x_next /= 4;
-}
-
-__device__ Vector2f next_diffusion(Vector2f x, float dx,  float nu, float dt, unsigned dim) {
-    // TODO: skeleton code; not tested
-    int i = (int)pos(0);
-    int j = (int)pos(1);
-    Vector2f x_next = 0;
-    float alpha = delta_x*delta_x/nu/dt;
-    x_next += (i - 1 < 0 || i - 1 >= dim || j < 0 || j >= dim) ? 0 : x[IND(i - 1, j, dim)];
-    x_next += (i + 1 < 0 || i + 1 >= dim || j < 0 || j >= dim) ? 0 : x[IND(i + 1, j, dim)];
-    x_next += (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : x[IND(i, j - 1, dim)];
-    x_next += (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : x[IND(i, j + 1, dim)];
-    x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? 0 : -delta_x*delta_x*x[IND(i, j, dim)];
-    x_next /= (4 + alpha);
-}
-
 
 /***
  * Computes the advection of the fluid.
@@ -96,16 +72,23 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
 */
 template <typename T>
 __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, Vector2f b) {
-    Vector2f f00 = field[IND(x - 1, y - 1, dim)];
-    Vector2f f01 = field[IND(x + 1, y - 1, dim)];
-    Vector2f f10 = field[IND(x - 1, y + 1, dim)];
-    Vector2f f11 = field[IND(x + 1, y + 1, dim)];
+    int i = (int)x(0);
+    int j = (int)x(1);
+
+    T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i - 1, j - 1, dim)];
+
+    T f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i + 1, j - 1, dim)];
+
+    T f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i - 1, j + 1, dim)];
+
+    T f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i + 1, j + 1, dim)];
 
     return (f00 + f01 + f10 + f11 + alpha*b) / beta;
 }
 
-__global__ void kernel(Vector2f *velocity, Vector2f *pressure) {
+__global__ void kernel(Vector2f *velocity, Vector2f *pressure, timestep, rdx, dim) {
     Vector2f x(threadIdx.x, threadIdx.y);
+    advect(x, velocity, velocity, timestep, rdx, dim);
     return;
 }
 
