@@ -53,8 +53,7 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
     }
 }
 
-__device__ void divergence(
-    Vector2f x, Vector2f* feild, Vector2f halfrdx, unsigned dim)
+__device__ void divergence(Vector2f x, Vector2f* feild, Vector2f halfrdx, unsigned dim)
 {
     i = (int)x(0);
     j = (int)x(1);
@@ -66,7 +65,7 @@ __device__ void divergence(
     Vector2f wB = (j - 1 < 0)    ? Vector2f::Zero() : field[IND(i, j - 1, dim)];
     Vector2f wT = (j + 1 <= dim) ? Vector2f::Zero() : field[IND(i, j + 1, dim)];
 
-    div = halfrdx * ((wR(0) - wL(0))) + (wT(1) - wB(1)));
+    div = halfrdx * ((wR(0) - wL(0))) + (wT(1) - wB(1));
 
     return div;
 }
@@ -89,7 +88,7 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
  * viscous diffusion of fluid.
 */
 template <typename T>
-__device__ void jacobi(Vector2f x, T *field, float alpha, float beta, Vector2f b) {
+__device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T *b, unsigned dim) {
     int i = (int)x(0);
     int j = (int)x(1);
 
@@ -101,12 +100,16 @@ __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, Vector2f b
 
     T f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i + 1, j + 1, dim)];
 
-    return (f00 + f01 + f10 + f11 + alpha*b) / beta;
+    field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + alpha*b[IND(i, j, dim)]) / beta;
 }
 
-__global__ void kernel(Vector2f *velocity, Vector2f *pressure, timestep, rdx, dim) {
+__global__ void kernel(Vector2f *u, Vector2f *p, float timestep, float rdx, float dim, float viscosity) {
     Vector2f x(threadIdx.x, threadIdx.y);
-    advect(x, velocity, velocity, timestep, rdx, dim);
+    advect(x, u, u, timestep, rdx, dim);
+    //diffusion
+    float alpha = (rdx*rdx)/(viscosity*timestep), beta = 4 + alpha;
+    jacobi<Vector2f>(x, u, alpha, beta, u, dim);
+
     return;
 }
 
@@ -118,7 +121,9 @@ int main(void) {
     // how many pixels a cell of the vector field represents
     float rdx = res / dim;
     
-    Vector2f *dev_velocity = initVectorField<Vector2f>(dim);
+    Vector2f *dev_velocity = initVectorField<Vector2f>(dim); //u
+
+
     float *dev_pressure = initScalarField<float>(dim);
 
     // Iterate
