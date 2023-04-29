@@ -10,17 +10,22 @@
     #include <unistd.h> // for sleep function. use window.h for windows.
 #endif
 
-// mouse click location
-Vector2f C;
-// direction and length of mouse drag
-Vector2f F;
+#define TIMESTEP 0.25
+#define DIM 1024
+#define RES 1024
+#define VISCOSITY 1
+#define RADIUS 1
+#define DECAY_RATE 0.01
 
 #define IND(x, y, d) int((y) * (d) + (x))
 
 using namespace std;
 using Eigen::Vector2f;
 
-Vector2f C((int)(dim / 2), (int)(dim / 2));
+// mouse click location
+Vector2f C;
+// direction and length of mouse drag
+Vector2f F;
 
 template <typename T>
 void initializeField(T **f, T **dev_f, T val, unsigned dim) {
@@ -211,20 +216,22 @@ __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
 int main(void) {
 
     // quarter of second timestep
-    float timestep = 0.25;
+    float timestep = TIMESTEP;
     // dimension of vector fields
-    unsigned dim = 1024;
+    unsigned dim = DIM;
     // resolution of display
-    unsigned res = 1024;
+    unsigned res = RES;
     // how many pixels a cell of the vector field represents
     float rdx = res / dim;
 
     // fluid parameters
-    float viscosity = 1;
+    float viscosity = VISCOSITY;
 
     // force parameters
     // glfwSetMouseButtonCallback(window, mouse_button_callback);
-    float r = 1;
+    C = Vector2f::Zero();
+    F = Vector2f::Zero();
+    float r = RADIUS;
 
     // fluid state representation: 
     // velocity vector field (u) and pressure scalar field (p).
