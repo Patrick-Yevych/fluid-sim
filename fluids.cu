@@ -269,8 +269,9 @@ int main(void) {
     dim3 threads(dim, dim);
     while (!(glfwWindowShouldClose)) {
         nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
-
+        cudaDeviceSynchronize();
         clrkernel<<<1, threads>>>(dev_uc, dev_u, dim);
+        cudaDeviceSynchronize();
 
         cudaMemcpy(*uc, *dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
 
