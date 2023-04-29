@@ -1,6 +1,10 @@
 #include <iostream>
 #include <math.h>
-#include <unistd.h> // for sleep function. use window.h for windows.
+#if define(_WIN32)
+    #include <windows.h>
+#else
+    #include <unistd.h> // for sleep function. use window.h for windows.
+#endif
 #include <Eigen/Dense>
 
 #define IND(x, y, d) = ((int)((y * d) + x))
