@@ -1,6 +1,6 @@
 #include <iostream>
 #include <math.h>
-#if define(_WIN32)
+#if defined(_WIN32)
     #include <windows.h>
 #else
     #include <unistd.h> // for sleep function. use window.h for windows.
