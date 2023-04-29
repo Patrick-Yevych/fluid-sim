@@ -39,10 +39,14 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim) {
         return Vector2f::Zero();
     } else {
         // Perform bilinear interpolation.
-        Vector2f f00 = field[IND(x-1, y-1, dim)];
-        Vector2f f01 = field[IND(x+1, y-1, dim)];
-        Vector2f f10 = field[IND(x-1, y+1, dim)];
-        Vector2f f11 = field[IND(x+1, y+1, dim)];
+        Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i - 1, j - 1, dim)];
+
+        Vector2f f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i + 1, j - 1, dim)];
+
+        Vector2f f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i - 1, j + 1, dim)];
+
+        Vector2f f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i + 1, j + 1, dim)];
+
         Vector2f f0 = (1 - dx) * f00 + dx * f10;
         Vector2f f1 = (1 - dx) * f01 + dx * f11;
         return (1 - dy) * f0 + dy * f1;
@@ -69,6 +73,8 @@ __device__ void divergence(
 
 
 /***
+ * Computes the advection of the fluid.
+ * 
  * x is the coordinate/position vector following notation of chp 38.
  * velfield is u, the velocity field as of the current time quanta.
  * field is the current field being updated.
@@ -78,16 +84,29 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
     field[IND(x(0), x(1), dim)] = bilerp(pos, field, dim);
 }
 
-__device__ void jacobi(Vector2f x, Vector2f *field, float alpha, float beta, Vector2f b) {
-    Vector2f f00 = field[IND(x - 1, y - 1, dim)];
-    Vector2f f01 = field[IND(x + 1, y - 1, dim)];
-    Vector2f f10 = field[IND(x - 1, y + 1, dim)];
-    Vector2f f11 = field[IND(x + 1, y + 1, dim)];
+/***
+ * Jacobi iteration for computing pressure and
+ * viscous diffusion of fluid.
+*/
+template <typename T>
+__device__ void jacobi(Vector2f x, T *field, float alpha, float beta, Vector2f b) {
+    int i = (int)x(0);
+    int j = (int)x(1);
+
+    T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i - 1, j - 1, dim)];
+
+    T f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i + 1, j - 1, dim)];
+
+    T f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i - 1, j + 1, dim)];
+
+    T f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i + 1, j + 1, dim)];
 
     return (f00 + f01 + f10 + f11 + alpha*b) / beta;
 }
 
-__global__ void kernel(void) {
+__global__ void kernel(Vector2f *velocity, Vector2f *pressure, timestep, rdx, dim) {
+    Vector2f x(threadIdx.x, threadIdx.y);
+    advect(x, velocity, velocity, timestep, rdx, dim);
     return;
 }
 
