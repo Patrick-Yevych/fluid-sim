@@ -1,11 +1,13 @@
 #include <iostream>
 #include <math.h>
-#if defined(_WIN32)
-#include <windows.h>
-#else
-#include <unistd.h> // for sleep function. use window.h for windows.
-#endif
 #include <eigen3/Eigen/Dense>
+#include "tinycolormap.hpp"
+
+#if defined(_WIN32)
+    #include <windows.h>
+#else
+    #include <unistd.h> // for sleep function. use window.h for windows.
+#endif
 
 //#include <cuda_runtime.h>
 //#include <cuda_gl_interop.h>
