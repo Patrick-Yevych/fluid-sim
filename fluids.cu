@@ -55,7 +55,7 @@ void decayForce() {
     float nx = F(0) - DECAY_RATE;
     float ny = F(1) - DECAY_RATE;
     nx = (nx > 0) ? nx : 0;
-    ny = (ny > 0) > ny : 0;
+    ny = (ny > 0) ? ny : 0;
     F << nx, ny;
 }
 
