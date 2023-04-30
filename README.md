@@ -8,10 +8,10 @@ demo2: https://youtube.com/shorts/-zmT2wl-XpA
 The inspiration behind fluid-sim was to create a tool that could help us better understand and simulate the behavior of air, smoke, and smog - complex fluids that play a critical role in our environment and our health. By simulating the movement and interactions of these fluids, we hope to gain insight on the effects of climate change and develop more effective strategies for modeling and predicting it.
 
 ## How to run
-This is a small CUDA, Eigen, SFML, and OpenGL application. To compile, simply run 
+This is a CUDA, Eigen, SFML, and OpenGL application. To compile, simply run 
 
 ```
-nvcc fluids.cu -o ./out -lglfw -lGLU -lGL
+$ nvcc fluids.cu -o ./out -lglfw -lGLU -lGL
 ```
 
 The executable file (call it `out`), just run `./out`. A GUI displaying a 512 × 512 field will be displayed, where you can interactively apply a force to see the action. Areas of high velocity are labelled yellow, followed by green, blue, and then purple.
@@ -19,8 +19,10 @@ The executable file (call it `out`), just run `./out`. A GUI displaying a 512 ×
 You can also adjust the timestep, fluid viscosity, applied force decay, and the radius of the applied force for a more customized experience.
 
 ```
-USAGE: ./out TIMESTEP VISCOSITY DECAY RADIUS
+$ ./out TIMESTEP VISCOSITY DECAY RADIUS
 ```
+
+The terminal will periodically print out the velocity of the central point of the field, and the current strength of the applied force.
 
 ## What it does
 
