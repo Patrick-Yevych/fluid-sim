@@ -174,6 +174,10 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 
 }
 
+__global__ void kernel(float *C, float *F) {
+    printf("%f, %f,%f,%f\n", F[0], F[1], C[0], C[1]);
+}
+
 /***
  * Navier-Stokes computation kernel.
 */
@@ -618,7 +622,8 @@ int main(void) {
     cudaDeviceSynchronize();
     cudaMemcpy(dev_F, F, sizeof(float)*2, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
-    nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
+    kernel<<<blocks, threads>>>(dev_C, dev_F);
+    //nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
     cudaDeviceSynchronize();
     clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
     cudaDeviceSynchronize();
