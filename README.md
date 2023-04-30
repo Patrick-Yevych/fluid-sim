@@ -1,4 +1,4 @@
-# fluid-sim
+# Fluid Simulation with Navier-Stokes
 
 **Inspiration**
 
@@ -7,6 +7,14 @@ The inspiration behind fluid-sim was to create a tool that could help us better 
 **What it does**
 
 Our program simulates the effect of temperature change on the state of fluids of various viscosity such as water, air, smoke, and smog. Users can configure simulation parameters such as fluid viscosity, simulation granularity, force multiplier, radius, and decay rate. Additionally, users can generate temperature change by clicking and dragging the mouse across the window and see a real time visualization of the fluid.
+
+| Timesteps | Viscosity | Decay | Description                             | Pictures             |
+| --------- | --------- | ----- | --------------------------------------- | -------------------- |
+| 0.25      | 1         | 1     | Default configuration, water like fluid | ![](./Demos/Default) |
+| 0.1       | 10        | 5     | Mud-like fluid, sticy                   | ![](./Demos/muddy)   |
+|           |           |       |                                         |                      |
+
+
 
 **How we built it**
 To build our fluid simulation, we leveraged the libraries CUDA, OpenGL, and Eigen in C++. We began by studying Stable Fluids, a paper published by Joe Stam of the University of Toronto. This paper presents a method to simulate fluids by discretizing and numerically computing the Navier Stokes equations. So, we encapsulate the state of the fluid by a velocity vector field and a scalar pressure field. These are represented as arrays of Eigen vectors. Next, we invoke a CUDA kernal to compute the velocity and pressure values at each pixel through a five step process: self-advection, diffusion, force application, Poisson-pressure, and projection. Afterwards, we use another CUDA kernal to convert the velocity vectors into RGB colour values and render the visualization with OpenGL.
