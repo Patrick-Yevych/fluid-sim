@@ -30,7 +30,7 @@ float *C;
 // direction and length of mouse drag
 float *F;
 // decay rate
-float decay = DECAY_RATE;
+float global_decay_rate = DECAY_RATE;
 
 /**
  * Initializes a vector or scalar field with initial conditions to both
@@ -83,8 +83,8 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
  */
 void decayForce()
 {
-    float nx = F[0] - decay;
-    float ny = F[1] - decay;
+    float nx = F[0] - global_decay_rate;
+    float ny = F[1] - global_decay_rate;
     nx = (nx > 0) ? nx : 0;
     ny = (ny > 0) ? ny : 0;
     F[0] = nx;
@@ -656,7 +656,7 @@ int main(int argc, char **argv)
     // fluid parameters
     float viscosity = VISCOSITY;
     // force decay rate
-    decay = DECAY_RATE;
+    global_decay_rate = DECAY_RATE;
     // force radius
     float r = RADIUS;
 
@@ -666,7 +666,7 @@ int main(int argc, char **argv)
         dim = atoi(argv[2]);
         res = atoi(argv[2]);
         viscosity = atof(argv[3]);
-        decay = atof(argv[4]);
+        global_decay_rate = atof(argv[4]);
         r = atof(argv[5]);
     }
     else if (argc != 1) {
