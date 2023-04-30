@@ -48,10 +48,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         glfwGetCursorPos(window, &xend, &yend);
         xdir = xend - xpos;
         ydir = yend - ypos;
-        F = 10*Vector2f(xdir, ydir).normalized();
+        F = Vector2f(xdir, ydir);
     	
     }
-    //cout << F(0) << ", " << F(1) << "\n"; 
+    cout << F(0) << ", " << F(1) << "\n"; 
 }
 
 
@@ -169,18 +169,23 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float
     float exp = (pow(x(0) - c(0), 2) + pow(x(1) - c(1), 2)) / 2;
     int i = x(0);
     int j = x(1);
+    Vector2f temp = F*pow(timestep, exp);
     field[IND(i, j, dim)] += F * pow(timestep, exp);
+    //printf("%f, %f,%d,%d\n", F(0), F(1),c(0),c(1));
+
 }
 
 /***
  * Navier-Stokes computation kernel.
 */
 __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, int timestep, float r, unsigned dim)
-{
+{   
     Vector2f x(threadIdx.x, threadIdx.y);
-
+    printf("%d,%d\n", c, F );
     //advection
     advect(x, u, u, timestep, rdx, dim);
+    //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
+    //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads(); // barrier
     //diffusion
     float alpha = (rdx * rdx) / (viscosity * timestep);
@@ -188,13 +193,17 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vect
     int i = x(0);
     int j = x(1);
     jacobi<Vector2f>(x, u, alpha, beta, u[IND(i, j, dim)], Vector2f::Zero(), dim);
+    
     __syncthreads();
 
     //force application
     // apply force every 10 seconds
     force(x, u, c, F, timestep, r, dim);
-
+    //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
+    //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
+    __syncthreads();
     //pressure
+
     alpha = -1 * timestep * timestep;
     beta = 4;
     jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx / 2), dim), 0, dim);
@@ -562,7 +571,8 @@ int main(void) {
     // Set the texture environment parameters
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-    dim3 threads(dim, dim);
+    dim3 threads(32, 32);
+    dim3 blocks(dim/32, dim/32);
     // Loop until the user closes
     while(!glfwWindowShouldClose(window)){
 	
@@ -595,16 +605,17 @@ int main(void) {
 
 	//update u
 	//cout<< u[256][256] << "\n";
-	nskernel<<<1, threads>>>(dev_u,dev_p, rdx, viscosity, C, F, timestep, r, dim);
+	//cout << C << F << "\n";
+	nskernel<<<blocks, threads>>>(dev_u,dev_p, rdx, viscosity, C, F, timestep, r, dim);
         cudaDeviceSynchronize();
-        clrkernel<<<1, threads>>>(dev_uc, dev_u, dim);
+        clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
         cudaDeviceSynchronize();
 	cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
 	cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
-	decayForce();
-	for (int i = 0; i < dim*dim; i++)
-  		if (u[i] != Vector2f::Zero())
-    			cout << "CHANGE\n";	
+	//decayForce();
+	//for (int i = 0; i < dim*dim; i++)
+  	//	if (u[i] != Vector2f::Zero())
+    	//		cout << (int)(i/dim) << "," << (int)(i%dim) << "," << u[i](0) << "," << u[i](1) << "\n" ;	
 
     }
     // main loop
