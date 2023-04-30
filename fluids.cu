@@ -292,8 +292,8 @@ __device__ void force(Vector2f x, Vector2f *field, Vector2f C, Vector2f F, float
     int j = x(1);
     Vector2f temp = F * timestep * pow(2.718, exp)*0.001;
     field[IND(i, j, dim)] += F * timestep * pow(2.718, exp)*0.001;
-    if (false && threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
-        printf("(%f %f)\n", temp(0), temp(1));
+    if ((temp(0) != 0 || temp(1) != 0) && x(0) == DIM/2 && x(1) == DIM/2)
+        printf("G1 = (%f, %f)\n", temp(0), temp(1));
 }
 
 
@@ -317,7 +317,7 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
     // advection
     advect(x, u, u, timestep, rdx, dim);
     if (x(0) == DIM/2 && x(1) == DIM/2)
-        printf("(%f, %f) : (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
+        printf("u[%.1f, %.1f] = (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
     
     // diffusion
