@@ -621,9 +621,9 @@ int main(void) {
     cudaDeviceSynchronize();
     nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
     cudaDeviceSynchronize();
-    for (int i = 0; i < dim * dim; i++)
-        if (u[i] != Vector2f::Zero())
-            cout << (int)(i / dim) << "," << (int)(i % dim) << "," << u[i](0) << "," << u[i](1) << "\n";
+    // for (int i = 0; i < dim * dim; i++)
+    //     if (u[i] != Vector2f::Zero())
+    //         cout << (int)(i / dim) << "," << (int)(i % dim) << "," << u[i](0) << "," << u[i](1) << "\n";
     cudaDeviceSynchronize();
     clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
     cudaDeviceSynchronize();
