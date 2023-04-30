@@ -152,17 +152,20 @@ __device__ void jacobi(Vector2f x, T* field, float alpha, float beta, T b, T zer
     int i = (int)x(0);
     int j = (int)x(1);
 
+    if (i < 0 || i >= dim || j < 0 || j >= dim) {
+        return;
+    }
     T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(i - 1, j - 1, dim)];
 
-    T f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(i + 1, j - 1, dim)];
+    T f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(1, 1, dim)];
 
     T f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(i - 1, j + 1, dim)];
 
-    T f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(i + 1, j + 1, dim)];
+    T f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(1, 1, dim)];
 
     field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + (alpha * b)) / beta;
     if (threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
-    printf("%f\n", alpha);
+    printf("(%f)\n", field[IND(i, j, dim)](0));
 }
 
 
@@ -180,7 +183,7 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 /***
  * Navier-Stokes computation kernel.
 */
-__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, float timestep, float r, unsigned dim)
+__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, int timestep, float r, unsigned dim)
 {   
     Vector2f x(blockDim.x*blockIdx.x + threadIdx.x, blockDim.y*blockIdx.y + threadIdx.y);
 
