@@ -661,7 +661,7 @@ int main(int argc, char **argv)
     float r = RADIUS;
 
     // user provided simulation parameters
-    if (argc == 6) {
+    if (argc == 5) {
         timestep = atof(argv[1]);
         viscosity = atof(argv[2]);
         global_decay_rate = atof(argv[3]);
