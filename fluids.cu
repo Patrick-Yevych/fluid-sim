@@ -2,6 +2,7 @@
 #include <math.h>
 #include <eigen3/Eigen/Dense>
 #include <GLFW/glfw3.h>
+#include <stdio.h>
 
 #if defined(_WIN32)
     #include <windows.h>
@@ -47,8 +48,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         glfwGetCursorPos(window, &xend, &yend);
         xdir = xend - xpos;
         ydir = yend - ypos;
-        F = Vector2f(xdir, ydir).normalized();
+        F = 10*Vector2f(xdir, ydir).normalized();
+    	
     }
+    //cout << F(0) << ", " << F(1) << "\n"; 
 }
 
 
@@ -189,9 +192,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vect
 
     //force application
     // apply force every 10 seconds
-    if (timestep % 10 == 0)
-        force(x, u, c, F, timestep, r, dim);
-    __syncthreads();
+    force(x, u, c, F, timestep, r, dim);
 
     //pressure
     alpha = -1 * timestep * timestep;
@@ -534,7 +535,7 @@ int main(void) {
     }
     //Make the window's context current
     glfwMakeContextCurrent(window);
-
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
     //Setup the projection matrix
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -548,7 +549,7 @@ int main(void) {
     GLuint tex;
     glGenTextures(1,&tex);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_UNSIGNED_BYTE, uc);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, uc);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
@@ -561,8 +562,20 @@ int main(void) {
     // Set the texture environment parameters
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
+    dim3 threads(dim, dim);
     // Loop until the user closes
     while(!glfwWindowShouldClose(window)){
+	
+	
+	
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB, dim,dim, 0, GL_RGB, GL_FLOAT, uc);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, tex);
+        
+
+	
 	glClear(GL_COLOR_BUFFER_BIT);
 	// Draw a quad with texture coordinates
 	glBegin(GL_QUADS);
@@ -579,6 +592,20 @@ int main(void) {
 
 	//Poll for and process events
 	glfwPollEvents();
+
+	//update u
+	//cout<< u[256][256] << "\n";
+	nskernel<<<1, threads>>>(dev_u,dev_p, rdx, viscosity, C, F, timestep, r, dim);
+        cudaDeviceSynchronize();
+        clrkernel<<<1, threads>>>(dev_uc, dev_u, dim);
+        cudaDeviceSynchronize();
+	cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
+	cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
+	decayForce();
+	for (int i = 0; i < dim*dim; i++)
+  		if (u[i] != Vector2f::Zero())
+    			cout << "CHANGE\n";	
+
     }
     // main loop
 //    dim3 threads(dim, dim);
