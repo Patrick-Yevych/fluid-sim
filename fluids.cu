@@ -16,7 +16,8 @@
 
 #define IND(x, y, d) int((y) * (d) + (x))
 #define CLAMP(x) ((x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 : x)
-#define BLOCKSIZE 32
+#define BLOCKSIZEY 1
+#define BLOCKSIZEX (512 / BLOCKSIZEY)
 
 using namespace std;
 using Eigen::Vector2f;
@@ -315,7 +316,7 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
 
     // advection
     advect(x, u, u, timestep, rdx, dim);
-    if (x(0) == 10 && x(1) == 10)
+    if (x(0) == DIM/2 && x(1) == DIM/2)
         printf("(%f, %f) : (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
     
@@ -728,8 +729,8 @@ int main(void)
     // Set the texture environment parameters
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-    dim3 threads(BLOCKSIZE, BLOCKSIZE);
-    dim3 blocks(dim / BLOCKSIZE, dim / BLOCKSIZE);
+    dim3 threads(BLOCKSIZEX, BLOCKSIZEY);
+    dim3 blocks(dim / BLOCKSIZEX, dim / BLOCKSIZEY);
     // Loop until the user closes
     while (!glfwWindowShouldClose(window))
     {
