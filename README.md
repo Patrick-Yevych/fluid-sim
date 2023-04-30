@@ -1,5 +1,6 @@
 # Fluid Simulation with Navier-Stokes
 demo1: https://youtu.be/ZlRuxI-4WbQ
+
 demo2: https://youtube.com/shorts/-zmT2wl-XpA
 **Inspiration**
 
