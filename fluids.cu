@@ -14,8 +14,8 @@
 #define DIM 128
 #define RES 128
 #define VISCOSITY 1
-#define RADIUS 1
-#define DECAY_RATE 0.01
+#define RADIUS 128
+#define DECAY_RATE 2
 
 #define IND(x, y, d) int((y) * (d) + (x))
 #define CLAMP(x) ((x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 : x)
@@ -90,6 +90,10 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
 
         Vector2f f0 = (1 - dx) * f00 + dx * f10;
         Vector2f f1 = (1 - dx) * f01 + dx * f11;
+        if (threadIdx.x == 0 && blockIdx.x == 0 && threadIdx.y == 0) {
+            Vector2f kay = field[IND(pos(0), pos(1), dim)];
+            printf("(%f,%f) %f\n", kay(0), kay(1), (1 - dy) * f0 + dy * f1);
+        }
         return (1 - dy) * f0 + dy * f1;
     }
 }
@@ -631,7 +635,7 @@ int main(void) {
     cudaDeviceSynchronize();
     cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
-    //decayForce();
+    decayForce();
 	//for (int i = 0; i < dim*dim; i++)
   	//	if (u[i] != Vector2f::Zero())
     	//		cout << (int)(i/dim) << "," << (int)(i%dim) << "," << u[i](0) << "," << u[i](1) << "\n" ;	
