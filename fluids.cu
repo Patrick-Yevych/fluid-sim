@@ -599,8 +599,10 @@ int main(void) {
 	glTexCoord2f(0.0f,0.0f);
 	glVertex2i(0,0);
 	glTexCoord2f(1.0f,0.0f);
-	glVertex2i(1.0f,1.0f);
+	glVertex2i(dim,0);
+	glTexCoord2f(1.0f,1.0f);
 	glVertex2i(dim, dim);
+	glTexCoord2f(0.0f,1.0f);
 	glVertex2i(0, dim);
 	glEnd();
 
