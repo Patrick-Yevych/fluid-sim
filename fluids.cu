@@ -615,17 +615,37 @@ int main(void) {
 	//update u
 	//cout<< u[256][256] << "\n";
 	//cout << *C << *F << "\n";
-    cudaMemcpy(dev_C, C, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    
+    cudaError_t error4 = cudaMemcpy(dev_C, C, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    if (error4 != cudaSuccess) {
+        printf("cudaMemcpy failed: %s\n", cudaGetErrorString(error4));
+        exit(-1);
+    }
     cudaDeviceSynchronize();
-    cudaMemcpy(dev_F, F, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    
+    cudaError_t error3 = cudaMemcpy(dev_F, F, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    if (error3 != cudaSuccess) {
+        printf("cudaMemcpy failed: %s\n", cudaGetErrorString(error3));
+        exit(-1);
+    }
     cudaDeviceSynchronize();
     nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
     cudaDeviceSynchronize();
     clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
     cudaDeviceSynchronize();
-	cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
+	
+    cudaError_t error2 = cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
+    if (error2 != cudaSuccess) {
+        printf("cudaMemcpy failed: %s\n", cudaGetErrorString(error2));
+        exit(-1);
+    }
     cudaDeviceSynchronize();
-	cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
+	
+    cudaErrr_t error1 = cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
+    if (error1 != cudaSuccess) {
+        printf("cudaMemcpy failed: %s\n", cudaGetErrorString(error1));
+        exit(-1);
+    }
     cudaDeviceSynchronize();
     //decayForce();
 	//for (int i = 0; i < dim*dim; i++)
