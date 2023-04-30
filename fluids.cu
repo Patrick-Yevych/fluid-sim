@@ -169,8 +169,8 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
     float exp = ( xC[0]*xC[0] + xC[1]*xC[1] ) / 2.;
     int i = x(0);
     int j = x(1);
-    Vector2f temp = F*pow(timestep, exp);
-    field[IND(i, j, dim)] += F * pow(timestep, exp);
+    Vector2f temp = F*timestep*pow(2.718, exp);
+    field[IND(i, j, dim)] += F * timestep*pow(2.718, exp);
     //printf("%f, %f,%d,%d\n", F(0), F(1),c(0),c(1));
 
 }
