@@ -1,12 +1,14 @@
 # Fluid Simulation with Navier-Stokes
-demo1: https://youtu.be/ZlRuxI-4WbQ
+**Demos**
 
-demo2: https://youtube.com/shorts/-zmT2wl-XpA
+https://youtu.be/ZlRuxI-4WbQ
 
-**Complie command**:
+https://youtube.com/shorts/-zmT2wl-XpA
+
+**Complie command**
 
 ```bash
-nvcc -lglfw -lGL fluids.cu -o out
+$ nvcc -lglfw -lGL fluids.cu -o out
 ```
 
 
