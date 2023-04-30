@@ -90,10 +90,6 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
 
         Vector2f f0 = (1 - dx) * f00 + dx * f10;
         Vector2f f1 = (1 - dx) * f01 + dx * f11;
-        if (threadIdx.x == 0 && blockIdx.x == 0 && threadIdx.y == 0) {
-            Vector2f kay = field[IND(pos(0), pos(1), dim)];
-            printf("(%f,%f) %f\n", kay(0), kay(1), (1 - dy) * f0 + dy * f1);
-        }
         return (1 - dy) * f0 + dy * f1;
     }
 }
@@ -164,7 +160,9 @@ __device__ void jacobi(Vector2f x, T* field, float alpha, float beta, T b, T zer
 
     T f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(i + 1, j + 1, dim)];
 
-    field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + alpha * b) / beta;
+    field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + (alpha * b)) / beta;
+    if (threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
+    printf("%f\n", alpha);
 }
 
 
