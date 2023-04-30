@@ -11,10 +11,10 @@
 #endif
 
 #define TIMESTEP 0.25
-#define DIM 128
-#define RES 128
+#define DIM 125
+#define RES 125
 #define VISCOSITY 1
-#define RADIUS 128
+#define RADIUS 125
 #define DECAY_RATE 2
 
 #define IND(x, y, d) int((y) * (d) + (x))
@@ -179,14 +179,6 @@ __device__ void next_diffusion(Vector2f x, Vector2f *field, float rdx, float vis
     x_next += (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim) ? Vector2f::Zero() : field[IND(i, j + 1, dim)];
     x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? Vector2f::Zero() : Vector2f(field[IND(i, j, dim)](0)*alpha, field[IND(i, j, dim)](1)*alpha);
     x_next /= (4 + alpha);
-    if (threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0) {
-        for (int i = 0; i < 5; i++) {
-            for (int j = 0; j < 5; j++) {
-                printf("(%f %f)", field[IND(i, j, dim)](0), field[IND(i, j, dim)](1));
-            }
-            printf("\n");
-        }
-    }
     field[IND(i - 1, j, dim)] = x_next;
 }
 
@@ -242,7 +234,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, floa
 
     //force application
     // apply force every 10 seconds
-    force(x, u, Vector2f(C[0],C[1]), Vector2f(F[0],F[1]), timestep, r, dim);
+    // force(x, u, Vector2f(C[0],C[1]), Vector2f(F[0],F[1]), timestep, r, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
     //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
