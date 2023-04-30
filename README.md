@@ -3,6 +3,14 @@ demo1: https://youtu.be/ZlRuxI-4WbQ
 
 demo2: https://youtube.com/shorts/-zmT2wl-XpA
 
+**Complie command**:
+
+```bash
+nvcc -lglfw -lGL fluids.cu -o out
+```
+
+
+
 **Inspiration**
 
 The inspiration behind fluid-sim was to create a tool that could help us better understand and simulate the behavior of air, smoke, and smog - complex fluids that play a critical role in our environment and our health. By simulating the movement and interactions of these fluids, we hope to gain insight on the effects of climate change and develop more effective strategies for modeling and predicting it.
