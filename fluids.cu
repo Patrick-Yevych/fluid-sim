@@ -175,7 +175,8 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 }
 
 __global__ void kernel(float *C, float *F) {
-    printf("%f, %f,%f,%f\n", F[0], F[1], C[0], C[1]);
+    C[0] = 500; 
+    C[1] = 500;
 }
 
 /***
@@ -623,6 +624,9 @@ int main(void) {
     cudaMemcpy(dev_F, F, sizeof(float)*2, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     kernel<<<blocks, threads>>>(dev_C, dev_F);
+    cudaDeviceSynchronize();
+    cudaMemcpy(dev_C, C, sizeof(float) * 2, cudaMemcpyDeviceToHost);
+    cout << C[0] << ", " << C[1] << "\n";
     //nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
     cudaDeviceSynchronize();
     clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
