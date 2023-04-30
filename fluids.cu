@@ -215,8 +215,8 @@ __device__ void force(Vector2f x, Vector2f *field, Vector2f C, Vector2f F, float
     float exp = (xC[0] * xC[0] + xC[1] * xC[1]) / r;
     int i = x(0);
     int j = x(1);
-    Vector2f temp = F * timestep * pow(2.718, exp);
-    field[IND(i, j, dim)] += F * timestep * pow(2.718, exp);
+    Vector2f temp = F * timestep * pow(2.718, exp)*0.001;
+    field[IND(i, j, dim)] += F * timestep * pow(2.718, exp)*0.001;
     if (false && threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
         printf("(%f %f)\n", temp(0), temp(1));
 }
