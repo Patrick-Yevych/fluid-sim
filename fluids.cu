@@ -670,7 +670,7 @@ int main(int argc, char **argv)
         r = atof(argv[5]);
     }
     else if (argc != 1) {
-        printf("USAGE: "+argv[0]+" TIMESTEP DIMENSION VISCOSITY DECAY RADIUS\n");
+        printf("USAGE: ./out TIMESTEP DIMENSION VISCOSITY DECAY RADIUS\n");
         return 1;
     }
 
