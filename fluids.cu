@@ -46,8 +46,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     }
     else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         glfwGetCursorPos(window, &xend, &yend);
-        F[0] = xend - xpos;
-        F[1] = yend - ypos;
+        F[0] = xend - C[0];
+        F[1] = yend - C[1];
     	
     }
     //cout << C[0] << ", " << C[1] << "\n"; 
