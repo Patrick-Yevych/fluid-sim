@@ -27,7 +27,7 @@ The terminal will periodically print out the velocity of the central point of th
 
 ## What it does
 
-Our program simulates the effect of temperature change on the state of fluids of various viscosity such as water, air, smoke, and smog. Users can configure simulation parameters such as fluid viscosity, simulation granularity, force multiplier, radius, and decay rate. Additionally, users can generate temperature change by clicking and dragging the mouse across the window and see a real time visualization of the fluid.
+Our program simulates the effect of temperature change on the state of fluids of various viscosity such as water, air, smoke, and smog. Users can configure simulation parameters such as fluid viscosity, simulation granularity, force radius and decay rate. Additionally, users can generate temperature change by clicking and dragging the mouse across the window and see a real time visualization of the fluid.
 
 | Timesteps | Viscosity | Decay | Radius | Description              | Pictures             |
 | --------- | --------- | ----- | ------ | ------------------------ | -------------------- |
