@@ -50,7 +50,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         F[1] = yend - ypos;
     	
     }
-    //cout << (*F)(0) << ", " << (*F)(1) << "\n"; 
+    //cout << F[0] << ", " << F[1] << "\n"; 
 }
 
 
@@ -613,7 +613,7 @@ int main(void) {
 
 	//update u
 	//cout<< u[256][256] << "\n";
-	//cout << *C << *F << "\n";
+	cout << C[0] << ", " << C[1] << "\n";
     cudaMemcpy(dev_C, C, sizeof(float)*2, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     cudaMemcpy(dev_F, F, sizeof(float)*2, cudaMemcpyHostToDevice);
