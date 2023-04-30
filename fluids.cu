@@ -1,15 +1,12 @@
+// A DeerHacks last-hour khuya submission.
+// nvcc fluids.cu -o ./out -lglfw -lGLU -lGL
 #include <iostream>
 #include <math.h>
 #include <eigen3/Eigen/Dense>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 
-#if defined(_WIN32)
-#include <windows.h>
-#else
-#include <unistd.h> // for sleep function. use window.h for windows.
-#endif
-
+/* Simulation parameters */
 #define TIMESTEP 0.25
 #define DIM 512
 #define RES 512
@@ -73,7 +70,6 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
         F[0] = xend - C[0];
         F[1] = yend - C[1];
     }
-    // cout << C[0] << ", " << C[1] << "\n";
 }
 
 /**
@@ -238,7 +234,6 @@ __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T b, T zer
  */
 __device__ void next_diffusion(Vector2f x, Vector2f *field, float rdx, float visc, float dt, unsigned dim)
 {
-    // TODO: skeleton code; not tested
     int i = (int)x(0);
     int j = (int)x(1);
     Vector2f x_next = Vector2f::Zero();
@@ -264,7 +259,6 @@ __device__ void next_diffusion(Vector2f x, Vector2f *field, float rdx, float vis
  */
 __device__ void next_poisson(Vector2f x, float *field, float div, float rdx, unsigned dim)
 {
-    // TODO: skeleton code; not tested
     int i = (int)x(0);
     int j = (int)x(1);
     float x_next = 0;
@@ -323,34 +317,28 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
     advect(x, u, u, timestep, rdx, dim);
     if (x(0) == 10 && x(1) == 10)
         printf("(%f, %f) : (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
-    __syncthreads(); // barrier
+    __syncthreads();
+    
     // diffusion
-    //  float alpha = (rdx * rdx) / (viscosity * timestep);
-    //  float beta = 4 + alpha;
-    //  int i = x(0);
-    //  int j = x(1);
-    //  jacobi<Vector2f>(x, u, alpha, beta, u[IND(i, j, dim)], Vector2f::Zero(), dim);
     next_diffusion(x, u, rdx, viscosity, timestep, dim);
-
     __syncthreads();
 
     // force application
-    //  apply force every 10 seconds
     force(x, u, Vector2f(C[0], C[1]), Vector2f(F[0], F[1]), timestep, r, dim);
-    // if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
-    //     printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
+    
     // pressure
 
     // alpha = -1 * timestep * timestep;
     // beta = 4;
     // jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx / 2), dim), 0, dim);
+
     next_poisson(x, p, divergence(x, u, (float)(rdx / 2), dim), rdx, dim);
     __syncthreads();
 
     // u = w - nabla p
     u[IND(x(0), x(1), dim)] -= gradient(x, p, (float)(rdx / 2), dim);
-    __syncthreads(); // potential redundant; implicit barrier between kernel calls
+    __syncthreads();
 }
 
 
