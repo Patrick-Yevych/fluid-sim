@@ -56,11 +56,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 
 void decayForce() {
-    float nx = (*F)(0) - DECAY_RATE;
-    float ny = (*F)(1) - DECAY_RATE;
+    float nx = F[0] - DECAY_RATE;
+    float ny = F[1] - DECAY_RATE;
     nx = (nx > 0) ? nx : 0;
     ny = (ny > 0) ? ny : 0;
-    *F << nx, ny;
+    F[0] = nx; F[1] = ny;
 }
 
 
@@ -520,7 +520,7 @@ int main(void) {
     F = (float *)malloc(sizeof(float)*2);
     F[0] = 0; F[1] = 0;
 
-    Vector2f *dev_C, *dev_F;
+    float *dev_C, *dev_F;
     cudaMalloc(&dev_C, sizeof(float)*2);
     cudaMalloc(&dev_F, sizeof(float)*2);
 
@@ -623,19 +623,9 @@ int main(void) {
     cudaDeviceSynchronize();
     clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
     cudaDeviceSynchronize();
-	
-    cudaError_t error2 = cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
-    if (error2 != cudaSuccess) {
-        printf("cudaMemcpy failed: %s\n", cudaGetErrorString(error2));
-        exit(-1);
-    }
+    cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
-	
-    cudaErrr_t error1 = cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
-    if (error1 != cudaSuccess) {
-        printf("cudaMemcpy failed: %s\n", cudaGetErrorString(error1));
-        exit(-1);
-    }
+    cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     //decayForce();
 	//for (int i = 0; i < dim*dim; i++)
