@@ -15,8 +15,10 @@
 #define DECAY_RATE 2
 
 #define IND(x, y, d) int((y) * (d) + (x))
-#define CLAMP(x) ((x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 : x)
-#define BLOCKSIZE 32
+#define CLAMP(x) ((x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 \
+                                              : x)
+#define BLOCKSIZEY 1
+#define BLOCKSIZEX (512 / BLOCKSIZEY)
 
 using namespace std;
 using Eigen::Vector2f;
@@ -129,7 +131,7 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim)
  * The divergence is calculated using the immediate neighboring value only
  * across the four cardinal directions.
  * @param x Cartesian location of the field
- * @param from The vector field 
+ * @param from The vector field
  * @param halfrdx Half of the rdx value [for efficiency reasons]
  * @param dim The maximum dimension of the field [for bound checking]
  * @return The approximate divergence value
@@ -150,7 +152,6 @@ __device__ float divergence(
 
     return halfrdx * (wR(0) - wL(0), wT(1) - wB(1));
 }
-
 
 /**
  * Obtain the approximate gradient of a scalar field [in this case, p].
@@ -221,7 +222,6 @@ __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T b, T zer
     field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + (alpha * b)) / beta;
 }
 
-
 /**
  * Perform Jacobi iteration for the diffusion vector
  * @param x is the coordinate/position vector following notation of chp 38.
@@ -246,7 +246,6 @@ __device__ void next_diffusion(Vector2f x, Vector2f *field, float rdx, float vis
     x_next /= (4 + alpha);
     field[IND(i - 1, j, dim)] = x_next;
 }
-
 
 /**
  * Perform Jacobi iteration for the diffusion vector
@@ -289,12 +288,11 @@ __device__ void force(Vector2f x, Vector2f *field, Vector2f C, Vector2f F, float
     float exp = (xC[0] * xC[0] + xC[1] * xC[1]) / r;
     int i = x(0);
     int j = x(1);
-    Vector2f temp = F * timestep * pow(2.718, exp)*0.001;
-    field[IND(i, j, dim)] += F * timestep * pow(2.718, exp)*0.001;
-    if (false && threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
-        printf("(%f %f)\n", temp(0), temp(1));
+    Vector2f temp = F * timestep * pow(2.718, exp) * 0.001;
+    field[IND(i, j, dim)] += F * timestep * pow(2.718, exp) * 0.001;
+    if ((temp(0) != 0 || temp(1) != 0) && x(0) == DIM / 2 && x(1) == DIM / 2)
+        printf("G1 = (%f, %f)\n", temp(0), temp(1));
 }
-
 
 /**
  * Navier-Stokes computation kernel.
@@ -315,10 +313,10 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
 
     // advection
     advect(x, u, u, timestep, rdx, dim);
-    if (x(0) == 10 && x(1) == 10)
-        printf("(%f, %f) : (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
+    if (x(0) == DIM / 2 && x(1) == DIM / 2)
+        printf("u[%.1f, %.1f] = (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
-    
+
     // diffusion
     next_diffusion(x, u, rdx, viscosity, timestep, dim);
     __syncthreads();
@@ -326,7 +324,7 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
     // force application
     force(x, u, Vector2f(C[0], C[1]), Vector2f(F[0], F[1]), timestep, r, dim);
     __syncthreads();
-    
+
     // pressure
 
     // alpha = -1 * timestep * timestep;
@@ -340,7 +338,6 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
     u[IND(x(0), x(1), dim)] -= gradient(x, p, (float)(rdx / 2), dim);
     __syncthreads();
 }
-
 
 /**
  * Given the value of x, obtain corresponding RGB value, for visualization.
@@ -625,7 +622,6 @@ __device__ Vector3f getColor(double x)
     return (1.0 - t) * c0 + t * c1;
 }
 
-
 /**
  * Maps velocity vectors to a color
  * @param uc Array of RGB values for every pixel
@@ -639,7 +635,6 @@ __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim)
     uc[IND(x(0), x(1), dim)] = getColor(
         (double)u[IND(x(0), x(1), dim)].norm());
 }
-
 
 /**
  * Driver code containing the CUDA kernels and OpenGL rendering.
@@ -728,8 +723,8 @@ int main(void)
     // Set the texture environment parameters
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-    dim3 threads(BLOCKSIZE, BLOCKSIZE);
-    dim3 blocks(dim / BLOCKSIZE, dim / BLOCKSIZE);
+    dim3 threads(BLOCKSIZEX, BLOCKSIZEY);
+    dim3 blocks(dim / BLOCKSIZEX, dim / BLOCKSIZEY);
     // Loop until the user closes
     while (!glfwWindowShouldClose(window))
     {
