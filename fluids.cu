@@ -180,12 +180,12 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 */
 __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, int timestep, float r, unsigned dim)
 {   
-    Vector2f x(threadIdx.x, threadIdx.y);
-    // printf("%f, %f,%f,%f\n", F[0], F[1],C[0],C[1]);
+    Vector2f x(32*blockIdx.x + threadIdx.x, 32*blockIdx.y + threadIdx.y);
+
     // advection
     advect(x, u, u, timestep, rdx, dim);
-    //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
-    //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
+    if (x(0) == 10 && x(1) == 10)
+        printf("(%f, %f) : (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads(); // barrier
     //diffusion
     float alpha = (rdx * rdx) / (viscosity * timestep);
@@ -494,7 +494,7 @@ __device__ Vector3f getColor(double x)
  * color mapping kernel.
 */
 __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
-    Vector2f x(threadIdx.x, threadIdx.y);
+    Vector2f x(32*blockIdx.x + threadIdx.x, 32*blockIdx.y + threadIdx.y);
     uc[IND(x(0), x(1), dim)] = getColor(
                                     (double)u[IND(x(0), x(1), dim)].norm() 
                                    );
