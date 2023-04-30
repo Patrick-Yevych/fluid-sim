@@ -25,9 +25,9 @@ using Eigen::Vector2f;
 using Eigen::Vector3f;
 
 // mouse click location
-Vector2f C;
+Vector2f *C;
 // direction and length of mouse drag
-Vector2f F;
+Vector2f *F;
 
 template <typename T>
 void initializeField(T **f, T **dev_f, T val, unsigned dim) {
@@ -42,13 +42,13 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     double xpos, ypos, xend, yend, xdir, ydir, len;
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         glfwGetCursorPos(window, &xpos, &ypos);
-        C << (int)xpos, (int)ypos;
+        *C << (int)xpos, (int)ypos;
     }
     else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         glfwGetCursorPos(window, &xend, &yend);
         xdir = xend - xpos;
         ydir = yend - ypos;
-        F = Vector2f(xdir, ydir);
+        *F = Vector2f(xdir, ydir);
     	
     }
     cout << F(0) << ", " << F(1) << "\n"; 
@@ -181,7 +181,7 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f *C, Vector2f *F, int timestep, float r, unsigned dim)
 {   
     Vector2f x(threadIdx.x, threadIdx.y);
-    printf("%d,%d\n", c, F );
+    printf("%d,%d\n", C, F );
     //advection
     advect(x, u, u, timestep, rdx, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
@@ -515,8 +515,10 @@ int main(void) {
     float viscosity = VISCOSITY;
 
     // force parameters
-    C = Vector2f::Zero();
-    F = Vector2f::Zero();
+    C = malloc(sizeof(Vector2f));
+    *C = Vector2f::Zero();
+    F = malloc(sizeof(Vector2f));
+    *F = Vector2f::Zero();
 
     Vector2f *dev_C, *dev_F;
     cudaMalloc(&dev_C, sizeof(Vector2f));
@@ -611,8 +613,8 @@ int main(void) {
 	//update u
 	//cout<< u[256][256] << "\n";
 	//cout << C << F << "\n";
-    cudaMemcpy(dev_C, &C, sizeof(Vector2f), cudaMemcpyHostToDevice);
-    cudaMemcpy(*dev_F, &F, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_C, C, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_F, F, sizeof(Vector2f), cudaMemcpyHostToDevice);
     nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
     cudaDeviceSynchronize();
     clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
