@@ -140,7 +140,8 @@ __device__ Vector2f gradient(
 */
 __device__ void advect(Vector2f x, Vector2f* field, Vector2f* velfield, float timestep, float rdx, unsigned dim) {
     Vector2f pos = x - timestep * rdx * velfield[IND(x(0), x(1), dim)];
-    field[IND(x(0), x(1), dim)] = bilerp(pos, field, dim);
+    field[IND(x(0), x(1), dim)](0) = x(0)*x(1);
+    field[IND(x(0), x(1), dim)](1) = pow(x(0), 0.5);
 }
 
 /***
@@ -184,7 +185,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, floa
 
     // advection
     advect(x, u, u, timestep, rdx, dim);
-    if (x(0) == 10 && x(1) == 10)
+    if (x(0) == 15 && x(1) == 20)
         printf("(%f, %f) : (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads(); // barrier
     //diffusion
