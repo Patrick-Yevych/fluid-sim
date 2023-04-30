@@ -181,7 +181,8 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, int timestep, float r, unsigned dim)
 {   
     Vector2f x(threadIdx.x, threadIdx.y);
-    // printf("%f, %f,%f,%f\n", F[0], F[1],C[0],C[1]);
+    if (threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
+        printf("F(%f,%f) C(%f,%f)\n", F[0], F[1],C[0],C[1]);
     // advection
     advect(x, u, u, timestep, rdx, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
