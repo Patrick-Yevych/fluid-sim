@@ -624,7 +624,7 @@ int main(void) {
     cudaDeviceSynchronize();
     cudaMemcpy(dev_F, F, sizeof(float)*2, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
-    kernel<<<blocks, threads>>>(dev_C, dev_F, dim);
+    kernel<<<blocks, threads>>>(dev_u, dev_C, dev_F, dim);
     cudaDeviceSynchronize();
     cudaMemcpy(u, dev_u, sizeof(Vector2f)*dim*dim, cudaMemcpyDeviceToHost);
     //cout << C[0] << ", " << C[1] << "\n";
