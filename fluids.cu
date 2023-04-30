@@ -51,16 +51,16 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         *F = Vector2f(xdir, ydir);
     	
     }
-    cout << F(0) << ", " << F(1) << "\n"; 
+    //cout << (*F)(0) << ", " << (*F)(1) << "\n"; 
 }
 
 
 void decayForce() {
-    float nx = F(0) - DECAY_RATE;
-    float ny = F(1) - DECAY_RATE;
+    float nx = (*F)(0) - DECAY_RATE;
+    float ny = (*F)(1) - DECAY_RATE;
     nx = (nx > 0) ? nx : 0;
     ny = (ny > 0) ? ny : 0;
-    F << nx, ny;
+    *F << nx, ny;
 }
 
 
@@ -515,9 +515,9 @@ int main(void) {
     float viscosity = VISCOSITY;
 
     // force parameters
-    C = malloc(sizeof(Vector2f));
+    C = (Vector2f *)malloc(sizeof(Vector2f));
     *C = Vector2f::Zero();
-    F = malloc(sizeof(Vector2f));
+    F = (Vector2f *)malloc(sizeof(Vector2f));
     *F = Vector2f::Zero();
 
     Vector2f *dev_C, *dev_F;
