@@ -57,7 +57,7 @@ void initializeField(T **f, T **dev_f, T val, unsigned dim)
  */
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 {
-    double xpos, ypos, xend, yend, xdir, ydir, len;
+    double xpos, ypos, xend, yend;
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
         glfwGetCursorPos(window, &xpos, &ypos);
