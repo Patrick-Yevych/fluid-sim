@@ -5,6 +5,7 @@
 #include <eigen3/Eigen/Dense>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include <string.h>
 
 /* Simulation parameters */
 #define TIMESTEP 0.25
@@ -661,12 +662,12 @@ int main(int argc, char **argv)
 
     // user provided simulation parameters
     if (argc == 6) {
-        timestep = argv[1];
-        dim = argv[2];
-        res = argv[2];
-        viscosity = argv[3];
-        decay = argv[4];
-        r = argv[5];
+        timestep = atof(argv[1]);
+        dim = atoi(argv[2]);
+        res = atoi(argv[2]);
+        viscosity = atof(argv[3]);
+        decay = atof(argv[4]);
+        r = atof(argv[5]);
     }
     else if (argc != 1) {
         printf("USAGE: "+argv[0]+" TIMESTEP DIMENSION VISCOSITY DECAY RADIUS\n");
