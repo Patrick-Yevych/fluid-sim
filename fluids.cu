@@ -175,7 +175,6 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 }
 
 __global__ void kernel(Vector2f *u, float *C, float *F, unsigned dim) {
-    printf("===%d===\n", dim);
     Vector2f x(threadIdx.x, threadIdx.y);
     u[IND(x(0), x(1), dim)] = Vector2f(C[0], C[1]);
 }
