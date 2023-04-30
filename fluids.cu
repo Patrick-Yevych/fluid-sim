@@ -198,7 +198,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vect
 
     //force application
     // apply force every 10 seconds
-    force(x, u, *C, *F, timestep, r, dim);
+    force(x, u, Vector2f(1000,1000), Vector2f(10,10), timestep, r, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
     //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
