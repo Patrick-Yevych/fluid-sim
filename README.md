@@ -8,11 +8,11 @@ The inspiration behind fluid-sim was to create a tool that could help us better 
 
 Our program simulates the effect of temperature change on the state of fluids of various viscosity such as water, air, smoke, and smog. Users can configure simulation parameters such as fluid viscosity, simulation granularity, force multiplier, radius, and decay rate. Additionally, users can generate temperature change by clicking and dragging the mouse across the window and see a real time visualization of the fluid.
 
-| Timesteps | Viscosity | Decay | Description                             | Pictures             |
-| --------- | --------- | ----- | --------------------------------------- | -------------------- |
-| 0.25      | 1         | 1     | Default configuration, water like fluid | ![](./Demos/Default) |
-| 0.1       | 10        | 5     | Mud-like fluid, sticy                   | ![](./Demos/muddy)   |
-|           |           |       |                                         |                      |
+| Timesteps | Viscosity | Decay | Description              | Pictures             |
+| --------- | --------- | ----- | ------------------------ | -------------------- |
+| 0.25      | 1         | 1     | Air-like fluid (Default) | ![](./Demos/Default) |
+| 0.1       | 10        | 5     | Smog-like fluid          | ![](./Demos/muddy)   |
+|           |           |       |                          |                      |
 
 
 
