@@ -165,7 +165,8 @@ __device__ void jacobi(Vector2f x, T* field, float alpha, float beta, T b, T zer
 
 
 __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float timestep, float r, unsigned dim) {
-    float exp = (pow(x(0) - C(0), 2) + pow(x(1) - C(1), 2)) / 2;
+    float xC[2] = {x(0) - C(0), x(1) - C(1)};
+    float exp = ( xC[0]*xC[0] + xC[1]*xC[1] ) / 2.;
     int i = x(0);
     int j = x(1);
     Vector2f temp = F*pow(timestep, exp);
