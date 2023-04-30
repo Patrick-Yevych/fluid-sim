@@ -106,7 +106,7 @@ __device__ float divergence(
     Vector2f wL = (i - 1 < 0) ? Vector2f::Zero() : from[IND(i - 1, j, dim)];
     Vector2f wR = (i + 1 >= dim) ? Vector2f::Zero() : from[IND(i + 1, j, dim)];
     Vector2f wB = (j - 1 < 0) ? Vector2f::Zero() : from[IND(i, j - 1, dim)];
-    Vector2f wT = (j + 1 <= dim) ? Vector2f::Zero() : from[IND(i, j + 1, dim)];
+    Vector2f wT = (j + 1 >= dim) ? Vector2f::Zero() : from[IND(i, j + 1, dim)];
 
     return halfrdx * (wR(0) - wL(0), wT(1) - wB(1));
 }
