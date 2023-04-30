@@ -180,7 +180,7 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 /***
  * Navier-Stokes computation kernel.
 */
-__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, int timestep, float r, unsigned dim)
+__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, float timestep, float r, unsigned dim)
 {   
     Vector2f x(blockDim.x*blockIdx.x + threadIdx.x, blockDim.y*blockIdx.y + threadIdx.y);
 
