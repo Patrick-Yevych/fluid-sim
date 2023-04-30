@@ -30,6 +30,15 @@ float *C;
 // direction and length of mouse drag
 float *F;
 
+/**
+ * Initializes a vector or scalar field with initial conditions to both
+ * the hostside and deviceside.
+ * @param f The field on the host.
+ * @param dev_f The field on the device.
+ * @param val Initial conditions.
+ * @param dim The dimensions [for boundary checking]
+ * @authors Patrick Yevych
+ */
 template <typename T>
 void initializeField(T **f, T **dev_f, T val, unsigned dim)
 {
@@ -40,6 +49,15 @@ void initializeField(T **f, T **dev_f, T val, unsigned dim)
     cudaMemcpy(*dev_f, *f, dim * dim * sizeof(T), cudaMemcpyHostToDevice);
 }
 
+/**
+ * Called whenever a click or release even happens on the window.
+ * Updates the convection F and the mouse click location C.
+ * @param window The GLFWwindow object to be applied to
+ * @param button ID of the clickable clicked
+ * @param action The type of action registered
+ * @param mods Any specific mods applied to this action
+ * @authors Patrick Yevych
+ */
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 {
     double xpos, ypos, xend, yend, xdir, ydir, len;
@@ -58,6 +76,10 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
     // cout << C[0] << ", " << C[1] << "\n";
 }
 
+/**
+ * Decays the convection force F.
+ * @authors Patrick Yevych
+ */
 void decayForce()
 {
     float nx = F[0] - DECAY_RATE;
@@ -68,9 +90,13 @@ void decayForce()
     F[1] = ny;
 }
 
-/***
- * Bilinear Interpolation
- * https://en.wikipedia.org/wiki/Bilinear_interpolation
+/**
+ * Implementation of bilinear interpolation given input location.
+ * @param pos The input location, supporting intermediate positions
+ * @param field The vector field
+ * @param dim The dimensions [for boundary checking]
+ * @authors Alex Apostolou, Samaria Mulligan
+ * @link https://en.wikipedia.org/wiki/Bilinear_interpolation
  */
 __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim)
 {
@@ -102,6 +128,17 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim)
     }
 }
 
+/**
+ * Obtain the approximate divergence of a vector field.
+ * The divergence is calculated using the immediate neighboring value only
+ * across the four cardinal directions.
+ * @param x Cartesian location of the field
+ * @param from The vector field 
+ * @param halfrdx Half of the rdx value [for efficiency reasons]
+ * @param dim The maximum dimension of the field [for bound checking]
+ * @return The approximate divergence value
+ * @authors Alex Apostolou
+ */
 __device__ float divergence(
     Vector2f x, Vector2f *from, float halfrdx, unsigned dim)
 {
@@ -118,8 +155,16 @@ __device__ float divergence(
     return halfrdx * (wR(0) - wL(0), wT(1) - wB(1));
 }
 
-/***
- * only for computing gradient of p.
+
+/**
+ * Obtain the approximate gradient of a scalar field [in this case, p].
+ * The gradient is calculated using the immediate neighboring value only.
+ * @param x Cartesian location of the field
+ * @param p The scalar field [pressure]
+ * @param halfrdx Half of the rdx value [for efficiency reasons]
+ * @param dim The maximum dimension of the field [for bound checking]
+ * @return The approximate gradient, as a Vector2f
+ * @authors Alex Apostolou
  */
 __device__ Vector2f gradient(
     Vector2f x, float *p, float halfrdx, unsigned dim)
@@ -140,10 +185,13 @@ __device__ Vector2f gradient(
 
 /***
  * Computes the advection of the fluid.
- *
- * x is the coordinate/position vector following notation of chp 38.
- * velfield is u, the velocity field as of the current time quanta.
- * field is the current field being updated.
+ * @param x is the coordinate/position vector following notation of chp 38.
+ * @param velfield is u, the velocity field as of the current time quanta.
+ * @param field is the current field being updated.
+ * @param timestep delta t for next iteration
+ * @param rdx approximation constant
+ * @param dim The maximum dimension of the field [for bound checking]
+ * @authors Patrick Yevych
  */
 __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float timestep, float rdx, unsigned dim)
 {
@@ -153,8 +201,8 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
 
 /**
  * @deprecated
- * Jacobi iteration for computing pressure and
- * viscous diffusion of fluid.
+ * Generalalized Jacobi for computing pressure or viscous diffusion of fluid.
+ * @authors Patrick Yevych
  */
 template <typename T>
 __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T b, T zero, unsigned dim)
@@ -177,6 +225,17 @@ __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T b, T zer
     field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + (alpha * b)) / beta;
 }
 
+
+/**
+ * Perform Jacobi iteration for the diffusion vector
+ * @param x is the coordinate/position vector following notation of chp 38.
+ * @param field The relevant vector field
+ * @param rdx Reciprocal of the grid scale
+ * @param visc Viscosity of the fluid
+ * @param dt Timestep
+ * @param dim The maximum dimension of the field [for bound checking]
+ * @authors Samaria Mulligan, Patrick Yevych
+ */
 __device__ void next_diffusion(Vector2f x, Vector2f *field, float rdx, float visc, float dt, unsigned dim)
 {
     // TODO: skeleton code; not tested
@@ -193,6 +252,16 @@ __device__ void next_diffusion(Vector2f x, Vector2f *field, float rdx, float vis
     field[IND(i - 1, j, dim)] = x_next;
 }
 
+
+/**
+ * Perform Jacobi iteration for the diffusion vector
+ * @param x is the coordinate/position vector following notation of chp 38.
+ * @param field The relevant scalar field
+ * @param div Timestep
+ * @param rdx Reciprocal of the grid scale
+ * @param dim The maximum dimension of the field [for bound checking]
+ * @authors Samaria Mulligan, Patrick Yevych
+ */
 __device__ void next_poisson(Vector2f x, float *field, float div, float rdx, unsigned dim)
 {
     // TODO: skeleton code; not tested
@@ -209,6 +278,17 @@ __device__ void next_poisson(Vector2f x, float *field, float div, float rdx, uns
     field[IND(i - 1, j, dim)] = x_next;
 }
 
+/**
+ * Apply the external source to the deviceside data
+ * @param x is the coordinate/position vector following notation of chp 38.
+ * @param field The relevant vector field
+ * @param C The center of the applied force
+ * @param F The value of the applied force
+ * @param timestep The time step per iteration of the program
+ * @param r The radius of the applied force
+ * @param dim The maximum dimension of the field [for bound checking]
+ * @authors Patrick Yevych, Hong Wei, Samaria Mulligan
+ */
 __device__ void force(Vector2f x, Vector2f *field, Vector2f C, Vector2f F, float timestep, float r, unsigned dim)
 {
     float xC[2] = {x(0) - C(0), x(1) - C(1)};
@@ -221,8 +301,19 @@ __device__ void force(Vector2f x, Vector2f *field, Vector2f C, Vector2f F, float
         printf("(%f %f)\n", temp(0), temp(1));
 }
 
-/***
+
+/**
  * Navier-Stokes computation kernel.
+ * @param u The vector velocity field
+ * @param p The scalar pressure field
+ * @param rdx Reciprocal of the grid scale
+ * @param viscosity The viscosity of the fluid
+ * @param C The center of the applied force
+ * @param F The value of the applied force
+ * @param timestep The time step per iteration of the program
+ * @param r The radius of the applied force
+ * @param dim The maximum dimension of the field [for bound checking]
+ * @authors Patrick Yevych
  */
 __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, float *C, float *F, float timestep, float r, unsigned dim)
 {
@@ -262,6 +353,14 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
     __syncthreads(); // potential redundant; implicit barrier between kernel calls
 }
 
+
+/**
+ * Given the value of x, obtain corresponding RGB value, for visualization.
+ * Adapted from Yuki Koyama.
+ * @param x The corresponding intermediate value
+ * @authors Hong Wei, Alex Apostolou
+ * @link https://github.com/yuki-koyama/tinycolormap
+ */
 __device__ Vector3f getColor(double x)
 {
     double data[][3] =
@@ -538,8 +637,13 @@ __device__ Vector3f getColor(double x)
     return (1.0 - t) * c0 + t * c1;
 }
 
-/***
- * color mapping kernel.
+
+/**
+ * Maps velocity vectors to a color
+ * @param uc Array of RGB values for every pixel
+ * @param u The velocity vector at that location
+ * @param dim The maximum dimension of the field [for bound checking]
+ * @authors Patrick Yevych
  */
 __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim)
 {
@@ -548,6 +652,11 @@ __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim)
         (double)u[IND(x(0), x(1), dim)].norm());
 }
 
+
+/**
+ * Driver code containing the CUDA kernels and OpenGL rendering.
+ * @authors Patrick Yevych, Hong Wei
+ */
 int main(void)
 {
 
@@ -662,18 +771,11 @@ int main(void)
         // Poll for and process events
         glfwPollEvents();
 
-        // update u
-        // cout<< u[256][256] << "\n";
-        // cout << C[0] << ", " << C[1] << "\n";
         cudaMemcpy(dev_C, C, sizeof(float) * 2, cudaMemcpyHostToDevice);
         cudaDeviceSynchronize();
         cudaMemcpy(dev_F, F, sizeof(float) * 2, cudaMemcpyHostToDevice);
         cudaDeviceSynchronize();
         nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
-        cudaDeviceSynchronize();
-        // for (int i = 0; i < dim * dim; i++)
-        //     if (u[i] != Vector2f::Zero())
-        //         cout << (int)(i / dim) << "," << (int)(i % dim) << "," << u[i](0) << "," << u[i](1) << "\n";
         cudaDeviceSynchronize();
         clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
         cudaDeviceSynchronize();
@@ -682,26 +784,7 @@ int main(void)
         cudaMemcpy(u, dev_u, dim * dim * sizeof(Vector2f), cudaMemcpyDeviceToHost);
         cudaDeviceSynchronize();
         decayForce();
-        // for (int i = 0; i < dim*dim; i++)
-        //	if (u[i] != Vector2f::Zero())
-        //		cout << (int)(i/dim) << "," << (int)(i%dim) << "," << u[i](0) << "," << u[i](1) << "\n" ;
     }
-    // main loop
-    //    dim3 threads(dim, dim);
-    //    while (!(glfwWindowShouldClose)) {
-    //        nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
-    //        cudaDeviceSynchronize();
-    //        clrkernel<<<1, threads>>>(dev_uc, dev_u, dim);
-    //        cudaDeviceSynchronize();
-
-    //        cudaMemcpy(*uc, *dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
-
-    //        decayForce();
-
-    //        glfwSwapBuffers(window);
-    // for the mouse event
-    //        glfwPollEvents();
-    //    }
 
     glfwTerminate();
 }
