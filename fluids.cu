@@ -14,7 +14,7 @@
 #define DIM 256
 #define RES 256
 #define VISCOSITY 1
-#define RADIUS 125
+#define RADIUS (DIM*DIM)
 #define DECAY_RATE 2
 
 #define IND(x, y, d) int((y) * (d) + (x))
@@ -206,7 +206,8 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
     int j = x(1);
     Vector2f temp = F*timestep*pow(2.718, exp);
     field[IND(i, j, dim)] += F * timestep*pow(2.718, exp);
-    printf("%f,%f,%f,%f\n", F(0), F(1), C(0), C(1));
+    if (threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
+    printf("(%f %f)\n", temp(0), temp(1));
 }
 
 /***
