@@ -25,9 +25,9 @@ using Eigen::Vector2f;
 using Eigen::Vector3f;
 
 // mouse click location
-Vector2f *C;
+float *C;
 // direction and length of mouse drag
-Vector2f *F;
+float *F;
 
 template <typename T>
 void initializeField(T **f, T **dev_f, T val, unsigned dim) {
@@ -178,10 +178,10 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 /***
  * Navier-Stokes computation kernel.
 */
-__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f *C, Vector2f *F, int timestep, float r, unsigned dim)
+__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, int timestep, float r, unsigned dim)
 {   
     Vector2f x(threadIdx.x, threadIdx.y);
-    printf("%f, %f,%f,%f\n", (*F)(0), (*F)(1),(*C)(0),(*C)(1));
+    printf("%f, %f,%f,%f\n", F[0], F[1],C[0],C[1]);
     // advection
     advect(x, u, u, timestep, rdx, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
@@ -198,7 +198,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vect
 
     //force application
     // apply force every 10 seconds
-    force(x, u, *C, *F, timestep, r, dim);
+    force(x, u, Vector2f(C[0],C[1]), Vector2f(F[0],F[1]), timestep, r, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
     //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
@@ -515,14 +515,14 @@ int main(void) {
     float viscosity = VISCOSITY;
 
     // force parameters
-    C = (Vector2f *)malloc(sizeof(Vector2f));
-    *C = Vector2f::Zero();
-    F = (Vector2f *)malloc(sizeof(Vector2f));
-    *F = Vector2f::Zero();
+    C = (float *)malloc(sizeof(float)*2);
+    C[0] = 0; C[1] = 0;
+    F = (float *)malloc(sizeof(float)*2);
+    F[0] = 0; F[1] = 0;
 
     Vector2f *dev_C, *dev_F;
-    cudaMalloc(&dev_C, sizeof(Vector2f));
-    cudaMalloc(&dev_F, sizeof(Vector2f));
+    cudaMalloc(&dev_C, sizeof(float)*2);
+    cudaMalloc(&dev_F, sizeof(float)*2);
 
     float r = RADIUS;
 
@@ -613,9 +613,9 @@ int main(void) {
 	//update u
 	//cout<< u[256][256] << "\n";
 	//cout << *C << *F << "\n";
-    cudaMemcpy(dev_C, C, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_C, C, sizeof(float)*2, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
-    cudaMemcpy(dev_F, F, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_F, F, sizeof(float)*2, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
     cudaDeviceSynchronize();
