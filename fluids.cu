@@ -165,8 +165,8 @@ __device__ void jacobi(Vector2f x, T* field, float alpha, float beta, T b, T zer
 }
 
 
-__device__ void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float timestep, float r, unsigned dim) {
-    float exp = (pow(x(0) - c(0), 2) + pow(x(1) - c(1), 2)) / 2;
+__device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float timestep, float r, unsigned dim) {
+    float exp = (pow(x(0) - C(0), 2) + pow(x(1) - C(1), 2)) / 2;
     int i = x(0);
     int j = x(1);
     Vector2f temp = F*pow(timestep, exp);
@@ -178,7 +178,7 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f c, Vector2f F, float
 /***
  * Navier-Stokes computation kernel.
 */
-__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f c, Vector2f F, int timestep, float r, unsigned dim)
+__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vector2f *C, Vector2f *F, int timestep, float r, unsigned dim)
 {   
     Vector2f x(threadIdx.x, threadIdx.y);
     printf("%d,%d\n", c, F );
@@ -198,7 +198,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vect
 
     //force application
     // apply force every 10 seconds
-    force(x, u, c, F, timestep, r, dim);
+    force(x, u, *C, *F, timestep, r, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
     //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
@@ -517,6 +517,11 @@ int main(void) {
     // force parameters
     C = Vector2f::Zero();
     F = Vector2f::Zero();
+
+    Vector2f *dev_C, *dev_F;
+    cudaMalloc(&dev_C, sizeof(Vector2f));
+    cudaMalloc(&dev_F, sizeof(Vector2f));
+
     float r = RADIUS;
 
     // fluid state representation: 
@@ -606,10 +611,12 @@ int main(void) {
 	//update u
 	//cout<< u[256][256] << "\n";
 	//cout << C << F << "\n";
-	nskernel<<<blocks, threads>>>(dev_u,dev_p, rdx, viscosity, C, F, timestep, r, dim);
-        cudaDeviceSynchronize();
-        clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
-        cudaDeviceSynchronize();
+    cudaMemcpy(dev_C, &C, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    cudaMemcpy(*dev_F, &F, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
+    cudaDeviceSynchronize();
+    clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
+    cudaDeviceSynchronize();
 	cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
 	cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
 	//decayForce();
