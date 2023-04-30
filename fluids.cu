@@ -5,20 +5,21 @@
 #include <stdio.h>
 
 #if defined(_WIN32)
-    #include <windows.h>
+#include <windows.h>
 #else
-    #include <unistd.h> // for sleep function. use window.h for windows.
+#include <unistd.h> // for sleep function. use window.h for windows.
 #endif
 
 #define TIMESTEP 0.25
-#define DIM 800
-#define RES 800
+#define DIM 512
+#define RES 512
 #define VISCOSITY 1
-#define RADIUS (DIM*DIM)
+#define RADIUS (DIM * DIM)
 #define DECAY_RATE 2
 
 #define IND(x, y, d) int((y) * (d) + (x))
-#define CLAMP(x) ((x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 : x)
+#define CLAMP(x) ((x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 \
+                                              : x)
 
 using namespace std;
 using Eigen::Vector2f;
@@ -30,54 +31,61 @@ float *C;
 float *F;
 
 template <typename T>
-void initializeField(T **f, T **dev_f, T val, unsigned dim) {
+void initializeField(T **f, T **dev_f, T val, unsigned dim)
+{
     *f = (T *)malloc(dim * dim * sizeof(T));
     cudaMalloc(dev_f, dim * dim * sizeof(T));
-    for (int i = 0; i < dim*dim; i++) *(*f + i) = val;
+    for (int i = 0; i < dim * dim; i++)
+        *(*f + i) = val;
     cudaMemcpy(*dev_f, *f, dim * dim * sizeof(T), cudaMemcpyHostToDevice);
 }
 
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
+{
     double xpos, ypos, xend, yend, xdir, ydir, len;
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    {
         glfwGetCursorPos(window, &xpos, &ypos);
-        C[0] = (int)xpos; C[1] = (int)ypos;
+        C[0] = (int)xpos;
+        C[1] = (int)ypos;
     }
-    else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+    else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+    {
         glfwGetCursorPos(window, &xend, &yend);
         F[0] = xend - C[0];
         F[1] = yend - C[1];
-    	
     }
-    //cout << C[0] << ", " << C[1] << "\n"; 
+    // cout << C[0] << ", " << C[1] << "\n";
 }
 
-
-void decayForce() {
+void decayForce()
+{
     float nx = F[0] - DECAY_RATE;
     float ny = F[1] - DECAY_RATE;
     nx = (nx > 0) ? nx : 0;
     ny = (ny > 0) ? ny : 0;
-    F[0] = nx; F[1] = ny;
+    F[0] = nx;
+    F[1] = ny;
 }
-
 
 /***
  * Bilinear Interpolation
  * https://en.wikipedia.org/wiki/Bilinear_interpolation
  */
-__device__ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
+__device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim)
+{
     int i = pos(0);
     int j = pos(1);
     double dx = pos(0) - i;
     double dy = pos(1) - j;
 
-    if (i < 0 || i >= dim || j < 0 || j >= dim) {
+    if (i < 0 || i >= dim || j < 0 || j >= dim)
+    {
         // Out of bounds.
         return Vector2f::Zero();
     }
-    else {
+    else
+    {
         // Perform bilinear interpolation.
 
         Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i - 1, j - 1, dim)];
@@ -95,7 +103,7 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f* field, unsigned dim) {
 }
 
 __device__ float divergence(
-    Vector2f x, Vector2f* from, float halfrdx, unsigned dim)
+    Vector2f x, Vector2f *from, float halfrdx, unsigned dim)
 {
     int i = x(0);
     int j = x(1);
@@ -110,26 +118,25 @@ __device__ float divergence(
     return halfrdx * (wR(0) - wL(0), wT(1) - wB(1));
 }
 
-
 /***
  * only for computing gradient of p.
-*/
+ */
 __device__ Vector2f gradient(
-    Vector2f x, float* p, float halfrdx, unsigned dim) {
+    Vector2f x, float *p, float halfrdx, unsigned dim)
+{
     int i = x(0);
     int j = x(1);
 
     if (i < 0 || i >= dim || j < 0 || j >= dim)
         return Vector2f::Zero();
 
-    float pL = (i - 1 < 0)    ? 0 : p[IND(i - 1, j, dim)];
+    float pL = (i - 1 < 0) ? 0 : p[IND(i - 1, j, dim)];
     float pR = (i + 1 >= dim) ? 0 : p[IND(i + 1, j, dim)];
-    float pB = (j - 1 < 0)    ? 0 : p[IND(i, j - 1, dim)];
+    float pB = (j - 1 < 0) ? 0 : p[IND(i, j - 1, dim)];
     float pT = (j + 1 >= dim) ? 0 : p[IND(i, j + 1, dim)];
 
     return halfrdx * Vector2f(pR - pL, pT - pB);
 }
-
 
 /***
  * Computes the advection of the fluid.
@@ -137,8 +144,9 @@ __device__ Vector2f gradient(
  * x is the coordinate/position vector following notation of chp 38.
  * velfield is u, the velocity field as of the current time quanta.
  * field is the current field being updated.
-*/
-__device__ void advect(Vector2f x, Vector2f* field, Vector2f* velfield, float timestep, float rdx, unsigned dim) {
+ */
+__device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float timestep, float rdx, unsigned dim)
+{
     Vector2f pos = x - timestep * rdx * velfield[IND(x(0), x(1), dim)];
     field[IND(x(0), x(1), dim)] = bilerp(pos, field, dim);
 }
@@ -147,13 +155,15 @@ __device__ void advect(Vector2f x, Vector2f* field, Vector2f* velfield, float ti
  * @deprecated
  * Jacobi iteration for computing pressure and
  * viscous diffusion of fluid.
-*/
+ */
 template <typename T>
-__device__ void jacobi(Vector2f x, T* field, float alpha, float beta, T b, T zero, unsigned dim) {
+__device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T b, T zero, unsigned dim)
+{
     int i = (int)x(0);
     int j = (int)x(1);
 
-    if (i < 0 || i >= dim || j < 0 || j >= dim) {
+    if (i < 0 || i >= dim || j < 0 || j >= dim)
+    {
         return;
     }
     T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(i - 1, j - 1, dim)];
@@ -167,78 +177,79 @@ __device__ void jacobi(Vector2f x, T* field, float alpha, float beta, T b, T zer
     field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + (alpha * b)) / beta;
 }
 
-__device__ void next_diffusion(Vector2f x, Vector2f *field, float rdx, float visc, float dt, unsigned dim) {
+__device__ void next_diffusion(Vector2f x, Vector2f *field, float rdx, float visc, float dt, unsigned dim)
+{
     // TODO: skeleton code; not tested
     int i = (int)x(0);
     int j = (int)x(1);
     Vector2f x_next = Vector2f::Zero();
-    float alpha = rdx*rdx/(visc*dt);
+    float alpha = rdx * rdx / (visc * dt);
     x_next += (i - 1 < 0 || i - 1 >= dim || j < 0 || j >= dim) ? Vector2f::Zero() : field[IND(i - 1, j, dim)];
     x_next += (i + 1 < 0 || i + 1 >= dim || j < 0 || j >= dim) ? Vector2f::Zero() : field[IND(i + 1, j, dim)];
     x_next += (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i, j - 1, dim)];
     x_next += (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim) ? Vector2f::Zero() : field[IND(i, j + 1, dim)];
-    x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? Vector2f::Zero() : Vector2f(field[IND(i, j, dim)](0)*alpha, field[IND(i, j, dim)](1)*alpha);
+    x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? Vector2f::Zero() : Vector2f(field[IND(i, j, dim)](0) * alpha, field[IND(i, j, dim)](1) * alpha);
     x_next /= (4 + alpha);
     field[IND(i - 1, j, dim)] = x_next;
 }
 
-
-__device__ void next_poisson(Vector2f x, float *field, float div, float rdx, unsigned dim) {
+__device__ void next_poisson(Vector2f x, float *field, float div, float rdx, unsigned dim)
+{
     // TODO: skeleton code; not tested
     int i = (int)x(0);
     int j = (int)x(1);
     float x_next = 0;
-    float alpha = -1*rdx*rdx;
+    float alpha = -1 * rdx * rdx;
     x_next += (i - 1 < 0 || i - 1 >= dim || j < 0 || j >= dim) ? 0 : field[IND(i - 1, j, dim)];
     x_next += (i + 1 < 0 || i + 1 >= dim || j < 0 || j >= dim) ? 0 : field[IND(i + 1, j, dim)];
     x_next += (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim - 1) ? 0 : field[IND(i, j - 1, dim)];
     x_next += (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim - 1) ? 0 : field[IND(i, j + 1, dim)];
-    x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? 0 : alpha*div;
+    x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? 0 : alpha * div;
     x_next /= 4;
     field[IND(i - 1, j, dim)] = x_next;
-
 }
 
-__device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float timestep, float r, unsigned dim) {
+__device__ void force(Vector2f x, Vector2f *field, Vector2f C, Vector2f F, float timestep, float r, unsigned dim)
+{
     float xC[2] = {x(0) - C(0), x(1) - C(1)};
-    float exp = ( xC[0]*xC[0] + xC[1]*xC[1] ) / r;
+    float exp = (xC[0] * xC[0] + xC[1] * xC[1]) / r;
     int i = x(0);
     int j = x(1);
-    Vector2f temp = F*timestep*pow(2.718, exp);
-    field[IND(i, j, dim)] += F * timestep*pow(2.718, exp);
-    if (threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
-    printf("(%f %f)\n", temp(0), temp(1));
+    Vector2f temp = F * timestep * pow(2.718, exp);
+    field[IND(i, j, dim)] += F * timestep * pow(2.718, exp);
+    if (false && threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
+        printf("(%f %f)\n", temp(0), temp(1));
 }
 
 /***
  * Navier-Stokes computation kernel.
-*/
-__global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, float timestep, float r, unsigned dim)
-{   
-    Vector2f x(blockDim.x*blockIdx.x + threadIdx.x, blockDim.y*blockIdx.y + threadIdx.y);
+ */
+__global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, float *C, float *F, float timestep, float r, unsigned dim)
+{
+    Vector2f x(blockDim.x * blockIdx.x + threadIdx.x, blockDim.y * blockIdx.y + threadIdx.y);
 
     // advection
     advect(x, u, u, timestep, rdx, dim);
     if (x(0) == 10 && x(1) == 10)
         printf("(%f, %f) : (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads(); // barrier
-    //diffusion
-    // float alpha = (rdx * rdx) / (viscosity * timestep);
-    // float beta = 4 + alpha;
-    // int i = x(0);
-    // int j = x(1);
-    // jacobi<Vector2f>(x, u, alpha, beta, u[IND(i, j, dim)], Vector2f::Zero(), dim);
+    // diffusion
+    //  float alpha = (rdx * rdx) / (viscosity * timestep);
+    //  float beta = 4 + alpha;
+    //  int i = x(0);
+    //  int j = x(1);
+    //  jacobi<Vector2f>(x, u, alpha, beta, u[IND(i, j, dim)], Vector2f::Zero(), dim);
     next_diffusion(x, u, rdx, viscosity, timestep, dim);
-    
+
     __syncthreads();
 
-    //force application
-    // apply force every 10 seconds
-    force(x, u, Vector2f(C[0],C[1]), Vector2f(F[0],F[1]), timestep, r, dim);
-    //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
-    //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
+    // force application
+    //  apply force every 10 seconds
+    force(x, u, Vector2f(C[0], C[1]), Vector2f(F[0], F[1]), timestep, r, dim);
+    // if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
+    //     printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
-    //pressure
+    // pressure
 
     // alpha = -1 * timestep * timestep;
     // beta = 4;
@@ -248,7 +259,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, floa
 
     // u = w - nabla p
     u[IND(x(0), x(1), dim)] -= gradient(x, p, (float)(rdx / 2), dim);
-    __syncthreads(); //potential redundant; implicit barrier between kernel calls
+    __syncthreads(); // potential redundant; implicit barrier between kernel calls
 }
 
 __device__ Vector3f getColor(double x)
@@ -519,25 +530,26 @@ __device__ Vector3f getColor(double x)
     Vector3f c0(d0[0],
                 d0[1],
                 d0[2]);
-    auto d1 = data[static_cast<std::size_t>(std::ceil(a))]; Vector3f c1(d1[0],
+    auto d1 = data[static_cast<std::size_t>(std::ceil(a))];
+    Vector3f c1(d1[0],
                 d1[1],
                 d1[2]);
 
     return (1.0 - t) * c0 + t * c1;
 }
 
-
 /***
  * color mapping kernel.
-*/
-__global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
-    Vector2f x(blockDim.x*blockIdx.x + threadIdx.x, blockDim.y*blockIdx.y + threadIdx.y);
+ */
+__global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim)
+{
+    Vector2f x(blockDim.x * blockIdx.x + threadIdx.x, blockDim.y * blockIdx.y + threadIdx.y);
     uc[IND(x(0), x(1), dim)] = getColor(
-                                    (double)u[IND(x(0), x(1), dim)].norm() 
-                                   );
+        (double)u[IND(x(0), x(1), dim)].norm());
 }
 
-int main(void) {
+int main(void)
+{
 
     // quarter of second timestep
     float timestep = TIMESTEP;
@@ -552,18 +564,20 @@ int main(void) {
     float viscosity = VISCOSITY;
 
     // force parameters
-    C = (float *)malloc(sizeof(float)*2);
-    C[0] = 0; C[1] = 0;
-    F = (float *)malloc(sizeof(float)*2);
-    F[0] = 0; F[1] = 0;
+    C = (float *)malloc(sizeof(float) * 2);
+    C[0] = 0;
+    C[1] = 0;
+    F = (float *)malloc(sizeof(float) * 2);
+    F[0] = 0;
+    F[1] = 0;
 
     float *dev_C, *dev_F;
-    cudaMalloc(&dev_C, sizeof(float)*2);
-    cudaMalloc(&dev_F, sizeof(float)*2);
+    cudaMalloc(&dev_C, sizeof(float) * 2);
+    cudaMalloc(&dev_F, sizeof(float) * 2);
 
     float r = RADIUS;
 
-    // fluid state representation: 
+    // fluid state representation:
     // velocity vector field (u) and pressure scalar field (p).
     Vector2f *u, *dev_u;
     float *p, *dev_p;
@@ -576,20 +590,22 @@ int main(void) {
     initializeField<Vector3f>(&uc, &dev_uc, Vector3f::Zero(), dim);
 
     // Initialize GLFW
-    if (!glfwInit()){
-	return -1;
+    if (!glfwInit())
+    {
+        return -1;
     }
 
     // Create a window
-    GLFWwindow* window = glfwCreateWindow(dim, dim, "sim", NULL, NULL);
-    if (!window){
-	glfwTerminate();
-	return -1;
+    GLFWwindow *window = glfwCreateWindow(dim, dim, "sim", NULL, NULL);
+    if (!window)
+    {
+        glfwTerminate();
+        return -1;
     }
-    //Make the window's context current
+    // Make the window's context current
     glfwMakeContextCurrent(window);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
-    //Setup the projection matrix
+    // Setup the projection matrix
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(0, dim, 0, dim, -1, 1);
@@ -600,7 +616,7 @@ int main(void) {
 
     // Load the texture from data
     GLuint tex;
-    glGenTextures(1,&tex);
+    glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, uc);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -616,80 +632,76 @@ int main(void) {
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
     dim3 threads(32, 32);
-    dim3 blocks(dim/32, dim/32);
+    dim3 blocks(dim / 32, dim / 32);
     // Loop until the user closes
-    while(!glfwWindowShouldClose(window)){
-	
-	
-	
-	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB, dim,dim, 0, GL_RGB, GL_FLOAT, uc);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, tex);
-        
+    while (!glfwWindowShouldClose(window))
+    {
 
-	
-	glClear(GL_COLOR_BUFFER_BIT);
-	// Draw a quad with texture coordinates
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f,0.0f);
-	glVertex2i(0,0);
-	glTexCoord2f(1.0f,0.0f);
-	glVertex2i(dim,0);
-	glTexCoord2f(1.0f,1.0f);
-	glVertex2i(dim, dim);
-	glTexCoord2f(0.0f,1.0f);
-	glVertex2i(0, dim);
-	glEnd();
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, uc);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, tex);
 
-	//Swap front and back buffers
-	glfwSwapBuffers(window);
+        glClear(GL_COLOR_BUFFER_BIT);
+        // Draw a quad with texture coordinates
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex2i(0, 0);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex2i(dim, 0);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex2i(dim, dim);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex2i(0, dim);
+        glEnd();
 
-	//Poll for and process events
-	glfwPollEvents();
+        // Swap front and back buffers
+        glfwSwapBuffers(window);
 
-	//update u
-	//cout<< u[256][256] << "\n";
-	//cout << C[0] << ", " << C[1] << "\n"; 
-    cudaMemcpy(dev_C, C, sizeof(float)*2, cudaMemcpyHostToDevice);
-    cudaDeviceSynchronize();
-    cudaMemcpy(dev_F, F, sizeof(float)*2, cudaMemcpyHostToDevice);
-    cudaDeviceSynchronize();
-    nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
-    cudaDeviceSynchronize();
-    // for (int i = 0; i < dim * dim; i++)
-    //     if (u[i] != Vector2f::Zero())
-    //         cout << (int)(i / dim) << "," << (int)(i % dim) << "," << u[i](0) << "," << u[i](1) << "\n";
-    cudaDeviceSynchronize();
-    clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
-    cudaDeviceSynchronize();
-    cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
-    cudaDeviceSynchronize();
-    cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
-    cudaDeviceSynchronize();
-    decayForce();
-	//for (int i = 0; i < dim*dim; i++)
-  	//	if (u[i] != Vector2f::Zero())
-    	//		cout << (int)(i/dim) << "," << (int)(i%dim) << "," << u[i](0) << "," << u[i](1) << "\n" ;	
+        // Poll for and process events
+        glfwPollEvents();
 
+        // update u
+        // cout<< u[256][256] << "\n";
+        // cout << C[0] << ", " << C[1] << "\n";
+        cudaMemcpy(dev_C, C, sizeof(float) * 2, cudaMemcpyHostToDevice);
+        cudaDeviceSynchronize();
+        cudaMemcpy(dev_F, F, sizeof(float) * 2, cudaMemcpyHostToDevice);
+        cudaDeviceSynchronize();
+        nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
+        cudaDeviceSynchronize();
+        // for (int i = 0; i < dim * dim; i++)
+        //     if (u[i] != Vector2f::Zero())
+        //         cout << (int)(i / dim) << "," << (int)(i % dim) << "," << u[i](0) << "," << u[i](1) << "\n";
+        cudaDeviceSynchronize();
+        clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
+        cudaDeviceSynchronize();
+        cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        cudaMemcpy(u, dev_u, dim * dim * sizeof(Vector2f), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        decayForce();
+        // for (int i = 0; i < dim*dim; i++)
+        //	if (u[i] != Vector2f::Zero())
+        //		cout << (int)(i/dim) << "," << (int)(i%dim) << "," << u[i](0) << "," << u[i](1) << "\n" ;
     }
     // main loop
-//    dim3 threads(dim, dim);
-//    while (!(glfwWindowShouldClose)) {
-//        nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
-//        cudaDeviceSynchronize();
-//        clrkernel<<<1, threads>>>(dev_uc, dev_u, dim);
-//        cudaDeviceSynchronize();
+    //    dim3 threads(dim, dim);
+    //    while (!(glfwWindowShouldClose)) {
+    //        nskernel<<<1, threads>>>(dev_velocity, dev_pressure, rdx, viscosity, c, F, timestep, r, dim);
+    //        cudaDeviceSynchronize();
+    //        clrkernel<<<1, threads>>>(dev_uc, dev_u, dim);
+    //        cudaDeviceSynchronize();
 
-//        cudaMemcpy(*uc, *dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
- 
-//        decayForce();
+    //        cudaMemcpy(*uc, *dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
 
-//        glfwSwapBuffers(window);
-        // for the mouse event
-//        glfwPollEvents();
-//    }
-    
+    //        decayForce();
+
+    //        glfwSwapBuffers(window);
+    // for the mouse event
+    //        glfwPollEvents();
+    //    }
+
     glfwTerminate();
 }
