@@ -174,9 +174,10 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 
 }
 
-__global__ void kernel(float *C, float *F, unsigned dim) {
-    C[0] += dim; 
-    C[1] += dim;
+__global__ void kernel(Vector2f *u, float *C, float *F, unsigned dim) {
+    printf("===%d===\n", dim);
+    Vector2f x(threadIdx.x, threadIdx.y);
+    u[IND(x(0), x(1), dim)] = Vector2f(C[0], C[1]);
 }
 
 /***
@@ -625,8 +626,11 @@ int main(void) {
     cudaDeviceSynchronize();
     kernel<<<blocks, threads>>>(dev_C, dev_F, dim);
     cudaDeviceSynchronize();
-    cudaMemcpy(C, dev_C, sizeof(float) * 2, cudaMemcpyDeviceToHost);
-    cout << C[0] << ", " << C[1] << "\n";
+    cudaMemcpy(u, dev_u, sizeof(Vector2f)*dim*dim, cudaMemcpyDeviceToHost);
+    //cout << C[0] << ", " << C[1] << "\n";
+    for (int i = 0; i < dim*dim; i++)
+  	  if (u[i] != Vector2f::Zero())
+    	cout << (int)(i/dim) << "," << (int)(i%dim) << "," << u[i](0) << "," << u[i](1) << "\n" ;
     //nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
     cudaDeviceSynchronize();
     clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
