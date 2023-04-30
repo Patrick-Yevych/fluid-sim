@@ -198,7 +198,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, Vect
 
     //force application
     // apply force every 10 seconds
-    force(x, u, Vector2f(1000,1000), Vector2f(10,10), timestep, r, dim);
+    force(x, u, *C, *F, timestep, r, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
     //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
@@ -614,14 +614,18 @@ int main(void) {
 	//cout<< u[256][256] << "\n";
 	//cout << *C << *F << "\n";
     cudaMemcpy(dev_C, C, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
     cudaMemcpy(dev_F, F, sizeof(Vector2f), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
     nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
     cudaDeviceSynchronize();
     clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
     cudaDeviceSynchronize();
 	cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
 	cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
-	//decayForce();
+    cudaDeviceSynchronize();
+    //decayForce();
 	//for (int i = 0; i < dim*dim; i++)
   	//	if (u[i] != Vector2f::Zero())
     	//		cout << (int)(i/dim) << "," << (int)(i%dim) << "," << u[i](0) << "," << u[i](1) << "\n" ;	
