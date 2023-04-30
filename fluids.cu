@@ -28,6 +28,8 @@ using Eigen::Vector3f;
 float *C;
 // direction and length of mouse drag
 float *F;
+// decay rate
+float decay;
 
 /**
  * Initializes a vector or scalar field with initial conditions to both
@@ -80,8 +82,8 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
  */
 void decayForce()
 {
-    float nx = F[0] - DECAY_RATE;
-    float ny = F[1] - DECAY_RATE;
+    float nx = F[0] - decay;
+    float ny = F[1] - decay;
     nx = (nx > 0) ? nx : 0;
     ny = (ny > 0) ? ny : 0;
     F[0] = nx;
@@ -640,9 +642,8 @@ __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim)
  * Driver code containing the CUDA kernels and OpenGL rendering.
  * @authors Patrick Yevych, Hong Wei
  */
-int main(void)
+int main(int argc, char **argv)
 {
-
     // quarter of second timestep
     float timestep = TIMESTEP;
     // dimension of vector fields
@@ -651,9 +652,26 @@ int main(void)
     unsigned res = RES;
     // how many pixels a cell of the vector field represents
     float rdx = res / dim;
-
     // fluid parameters
     float viscosity = VISCOSITY;
+    // force decay rate
+    decay = DECAY_RATE;
+    // force radius
+    float r = RADIUS;
+
+    // user provided simulation parameters
+    if (argc == 6) {
+        timestep = argv[1];
+        dim = argv[2];
+        res = argv[2];
+        viscosity = argv[3];
+        decay = argv[4];
+        r = argv[5];
+    }
+    else if (argc != 1) {
+        printf("USAGE: "+argv[0]+" TIMESTEP DIMENSION VISCOSITY DECAY RADIUS\n");
+        return 1;
+    }
 
     // force parameters
     C = (float *)malloc(sizeof(float) * 2);
@@ -666,8 +684,6 @@ int main(void)
     float *dev_C, *dev_F;
     cudaMalloc(&dev_C, sizeof(float) * 2);
     cudaMalloc(&dev_F, sizeof(float) * 2);
-
-    float r = RADIUS;
 
     // fluid state representation:
     // velocity vector field (u) and pressure scalar field (p).
