@@ -50,7 +50,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         F[1] = yend - ypos;
     	
     }
-    //cout << F[0] << ", " << F[1] << "\n"; 
+    cout << C[0] << ", " << C[1] << "\n"; 
 }
 
 
