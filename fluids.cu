@@ -663,14 +663,12 @@ int main(int argc, char **argv)
     // user provided simulation parameters
     if (argc == 6) {
         timestep = atof(argv[1]);
-        dim = atoi(argv[2]);
-        res = atoi(argv[2]);
-        viscosity = atof(argv[3]);
-        global_decay_rate = atof(argv[4]);
-        r = atof(argv[5]);
+        viscosity = atof(argv[2]);
+        global_decay_rate = atof(argv[3]);
+        r = atof(argv[4]);
     }
     else if (argc != 1) {
-        printf("USAGE: ./out TIMESTEP DIMENSION VISCOSITY DECAY RADIUS\n");
+        printf("USAGE: ./out TIMESTEP VISCOSITY DECAY RADIUS\n");
         return 1;
     }
 
