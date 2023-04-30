@@ -180,7 +180,7 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 */
 __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, int timestep, float r, unsigned dim)
 {   
-    Vector2f x(32*blockIdx.x + threadIdx.x, 32*blockIdx.y + threadIdx.y);
+    Vector2f x(blockDim.x*blockIdx.x + threadIdx.x, blockDim.y*blockIdx.y + threadIdx.y);
 
     // advection
     advect(x, u, u, timestep, rdx, dim);
@@ -494,7 +494,7 @@ __device__ Vector3f getColor(double x)
  * color mapping kernel.
 */
 __global__ void clrkernel(Vector3f *uc, Vector2f *u, unsigned dim) {
-    Vector2f x(32*blockIdx.x + threadIdx.x, 32*blockIdx.y + threadIdx.y);
+    Vector2f x(blockDim.x*blockIdx.x + threadIdx.x, blockDim.y*blockIdx.y + threadIdx.y);
     uc[IND(x(0), x(1), dim)] = getColor(
                                     (double)u[IND(x(0), x(1), dim)].norm() 
                                    );
