@@ -1,7 +1,8 @@
 # Fluid Simulation with Navier-Stokes
-demo1: https://youtu.be/ZlRuxI-4WbQ
+![Animated GIF Demo](./Demos/animated.gif)
 
-demo2: https://youtube.com/shorts/-zmT2wl-XpA
+* demo1: https://youtu.be/ZlRuxI-4WbQ
+* demo2: https://youtube.com/shorts/-zmT2wl-XpA
 
 ## Inspiration
 
@@ -30,7 +31,7 @@ Our program simulates the effect of temperature change on the state of fluids of
 
 | Timesteps | Viscosity | Decay | Description              | Pictures             |
 | --------- | --------- | ----- | ------------------------ | -------------------- |
-| 0.25      | 1         | 1     | Air-like fluid (Default) | ![](./Demos/Default) |
+| 0.25      | 1         | 1     | Air-like fluid (Default) | ![](./Demos/default) |
 | 0.1       | 10        | 5     | Smog-like fluid          | ![](./Demos/muddy)   |
 |           |           |       |                          |                      |
 
