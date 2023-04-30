@@ -13,7 +13,7 @@
 #define RES 512
 #define VISCOSITY 1
 #define RADIUS (DIM * DIM)
-#define DECAY_RATE 2
+#define DECAY_RATE 2.0
 
 #define IND(x, y, d) int((y) * (d) + (x))
 #define CLAMP(x) ((x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 \
@@ -30,7 +30,7 @@ float *C;
 // direction and length of mouse drag
 float *F;
 // decay rate
-float decay;
+float decay = DECAY_RATE;
 
 /**
  * Initializes a vector or scalar field with initial conditions to both
