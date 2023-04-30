@@ -15,8 +15,8 @@
 #define DECAY_RATE 2
 
 #define IND(x, y, d) int((y) * (d) + (x))
-#define CLAMP(x) ((x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 \
-                                              : x)
+#define CLAMP(x) ((x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 : x)
+#define BLOCKSIZE 32
 
 using namespace std;
 using Eigen::Vector2f;
@@ -728,8 +728,8 @@ int main(void)
     // Set the texture environment parameters
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-    dim3 threads(32, 32);
-    dim3 blocks(dim / 32, dim / 32);
+    dim3 threads(BLOCKSIZE, BLOCKSIZE);
+    dim3 blocks(dim / BLOCKSIZE, dim / BLOCKSIZE);
     // Loop until the user closes
     while (!glfwWindowShouldClose(window))
     {
