@@ -599,8 +599,10 @@ int main(void) {
 	glTexCoord2f(0.0f,0.0f);
 	glVertex2i(0,0);
 	glTexCoord2f(1.0f,0.0f);
-	glVertex2i(1.0f,1.0f);
+	glVertex2i(dim,0);
+	glTexCoord2f(1.0f,1.0f);
 	glVertex2i(dim, dim);
+	glTexCoord2f(0.0f,1.0f);
 	glVertex2i(0, dim);
 	glEnd();
 
@@ -621,9 +623,19 @@ int main(void) {
     cudaDeviceSynchronize();
     clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
     cudaDeviceSynchronize();
-	cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
+	
+    cudaError_t error2 = cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
+    if (error2 != cudaSuccess) {
+        printf("cudaMemcpy failed: %s\n", cudaGetErrorString(error2));
+        exit(-1);
+    }
     cudaDeviceSynchronize();
-	cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
+	
+    cudaErrr_t error1 = cudaMemcpy(u,dev_u, dim*dim*sizeof(Vector2f), cudaMemcpyDeviceToHost);
+    if (error1 != cudaSuccess) {
+        printf("cudaMemcpy failed: %s\n", cudaGetErrorString(error1));
+        exit(-1);
+    }
     cudaDeviceSynchronize();
     //decayForce();
 	//for (int i = 0; i < dim*dim; i++)
