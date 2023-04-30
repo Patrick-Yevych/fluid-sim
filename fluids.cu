@@ -11,8 +11,8 @@
 #endif
 
 #define TIMESTEP 0.25
-#define DIM 512
-#define RES 512
+#define DIM 128
+#define RES 128
 #define VISCOSITY 1
 #define RADIUS 1
 #define DECAY_RATE 0.01
@@ -181,7 +181,7 @@ __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float
 __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, float *C, float *F, int timestep, float r, unsigned dim)
 {   
     Vector2f x(threadIdx.x, threadIdx.y);
-    printf("%f, %f,%f,%f\n", F[0], F[1],C[0],C[1]);
+    // printf("%f, %f,%f,%f\n", F[0], F[1],C[0],C[1]);
     // advection
     advect(x, u, u, timestep, rdx, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
