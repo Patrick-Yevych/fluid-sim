@@ -11,8 +11,8 @@
 #endif
 
 #define TIMESTEP 0.25
-#define DIM 256
-#define RES 256
+#define DIM 800
+#define RES 800
 #define VISCOSITY 1
 #define RADIUS (DIM*DIM)
 #define DECAY_RATE 2
