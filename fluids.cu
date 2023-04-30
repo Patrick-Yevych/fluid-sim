@@ -11,8 +11,8 @@
 #endif
 
 #define TIMESTEP 0.25
-#define DIM 125
-#define RES 125
+#define DIM 256
+#define RES 256
 #define VISCOSITY 1
 #define RADIUS 125
 #define DECAY_RATE 2
@@ -201,13 +201,12 @@ __device__ void next_poisson(Vector2f x, float *field, float div, float rdx, uns
 
 __device__ void force(Vector2f x, Vector2f* field, Vector2f C, Vector2f F, float timestep, float r, unsigned dim) {
     float xC[2] = {x(0) - C(0), x(1) - C(1)};
-    float exp = ( xC[0]*xC[0] + xC[1]*xC[1] ) / 2.;
+    float exp = ( xC[0]*xC[0] + xC[1]*xC[1] ) / r;
     int i = x(0);
     int j = x(1);
     Vector2f temp = F*timestep*pow(2.718, exp);
     field[IND(i, j, dim)] += F * timestep*pow(2.718, exp);
-    //printf("%f, %f,%d,%d\n", F(0), F(1),c(0),c(1));
-
+    printf("%f,%f,%f,%f\n", F(0), F(1), C(0), C(1));
 }
 
 /***
@@ -234,7 +233,7 @@ __global__ void nskernel(Vector2f* u, float* p, float rdx, float viscosity, floa
 
     //force application
     // apply force every 10 seconds
-    // force(x, u, Vector2f(C[0],C[1]), Vector2f(F[0],F[1]), timestep, r, dim);
+    force(x, u, Vector2f(C[0],C[1]), Vector2f(F[0],F[1]), timestep, r, dim);
     //if (u[IND(x(0), x(1), dim)] != Vector2f::Zero())
     //    printf("(%d, %d) : (%d, %d)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
