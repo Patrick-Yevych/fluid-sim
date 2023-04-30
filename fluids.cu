@@ -42,13 +42,12 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     double xpos, ypos, xend, yend, xdir, ydir, len;
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         glfwGetCursorPos(window, &xpos, &ypos);
-        *C << (int)xpos, (int)ypos;
+        C[0] = (int)xpos; C[1] = (int)ypos;
     }
     else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         glfwGetCursorPos(window, &xend, &yend);
-        xdir = xend - xpos;
-        ydir = yend - ypos;
-        *F = Vector2f(xdir, ydir);
+        F[0] = xend - xpos;
+        F[1] = yend - ypos;
     	
     }
     //cout << (*F)(0) << ", " << (*F)(1) << "\n"; 
