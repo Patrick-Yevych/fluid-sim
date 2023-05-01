@@ -73,7 +73,7 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
     {
         glfwGetCursorPos(window, &xend, &yend);
         F[0] = xend - C[0];
-        F[1] = yend - C[1];
+        F[1] = C[1] - yend;
     }
 }
 
