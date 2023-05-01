@@ -26,9 +26,9 @@ using Eigen::Vector2f;
 using Eigen::Vector3f;
 
 // mouse click location
-float *C;
+Vector2f C;
 // direction and length of mouse drag
-float *F;
+Vector2f F;
 // decay rate
 float global_decay_rate = DECAY_RATE;
 
@@ -66,14 +66,12 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
         glfwGetCursorPos(window, &xpos, &ypos);
-        C[0] = (int)xpos;
-        C[1] = (int)ypos;
+        C = Vector2f((int)xpos, (int)ypos);
     }
     else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
     {
         glfwGetCursorPos(window, &xend, &yend);
-        F[0] = xend - C[0];
-        F[1] = yend - C[1];
+        F = Vector2f(xend - C(0), yend - C(1));
     }
 }
 
@@ -83,12 +81,11 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
  */
 void decayForce()
 {
-    float nx = F[0] - global_decay_rate;
-    float ny = F[1] - global_decay_rate;
+    float nx = F(0) - global_decay_rate;
+    float ny = F(1) - global_decay_rate;
     nx = (nx > 0) ? nx : 0;
     ny = (ny > 0) ? ny : 0;
-    F[0] = nx;
-    F[1] = ny;
+    F = Vector2f(nx, ny);
 }
 
 /**
@@ -309,7 +306,7 @@ __device__ void force(Vector2f x, Vector2f *field, Vector2f C, Vector2f F, float
  * @param dim The maximum dimension of the field [for bound checking]
  * @authors Patrick Yevych
  */
-__global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, float *C, float *F, float timestep, float r, unsigned dim)
+__global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, Vector2f C, Vector2f F, float timestep, float r, unsigned dim)
 {
     Vector2f x(blockDim.x * blockIdx.x + threadIdx.x, blockDim.y * blockIdx.y + threadIdx.y);
 
@@ -327,7 +324,7 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
     __syncthreads();
 
     // force application
-    force(x, u, Vector2f(C[0], C[1]), Vector2f(F[0], F[1]), timestep, r, dim);
+    force(x, u, C, F, timestep, r, dim);
     __syncthreads();
 
     // pressure
@@ -675,16 +672,7 @@ int main(int argc, char **argv)
     }
 
     // force parameters
-    C = (float *)malloc(sizeof(float) * 2);
-    C[0] = 0;
-    C[1] = 0;
-    F = (float *)malloc(sizeof(float) * 2);
-    F[0] = 0;
-    F[1] = 0;
-
-    float *dev_C, *dev_F;
-    cudaMalloc(&dev_C, sizeof(float) * 2);
-    cudaMalloc(&dev_F, sizeof(float) * 2);
+    C = Vector2f::Zero(); F = Vector2f::Zero();
 
     // fluid state representation:
     // velocity vector field (u) and pressure scalar field (p).
@@ -771,11 +759,7 @@ int main(int argc, char **argv)
         // Poll for and process events
         glfwPollEvents();
 
-        cudaMemcpy(dev_C, C, sizeof(float) * 2, cudaMemcpyHostToDevice);
-        cudaDeviceSynchronize();
-        cudaMemcpy(dev_F, F, sizeof(float) * 2, cudaMemcpyHostToDevice);
-        cudaDeviceSynchronize();
-        nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, dev_C, dev_F, timestep, r, dim);
+        nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, C, F, timestep, r, dim);
         cudaDeviceSynchronize();
         clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
         cudaDeviceSynchronize();
