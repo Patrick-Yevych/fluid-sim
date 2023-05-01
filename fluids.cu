@@ -40,13 +40,11 @@ void initializeField(T **f, T **dev_f, T val, unsigned dim)
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 {
     double xpos, ypos, xend, yend;
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-    {
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         glfwGetCursorPos(window, &xpos, &ypos);
         C = Vector2f((int)xpos, (int)ypos);
     }
-    else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-    {
+    else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         glfwGetCursorPos(window, &xend, &yend);
         F = Vector2f(xend - C(0), yend - C(1));
     }
@@ -80,25 +78,21 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim)
     double dx = pos(0) - i;
     double dy = pos(1) - j;
 
-    if (i < 0 || i >= dim || j < 0 || j >= dim)
-    {
+    if (i < 0 || i >= dim || j < 0 || j >= dim) {
         // Out of bounds.
         return Vector2f::Zero();
     }
-    else
-    {
+    else {
         // Perform bilinear interpolation.
 
         Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i - 1, j - 1, dim)];
-
         Vector2f f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i + 1, j - 1, dim)];
-
         Vector2f f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? Vector2f::Zero() : field[IND(i - 1, j + 1, dim)];
-
         Vector2f f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? Vector2f::Zero() : field[IND(i + 1, j + 1, dim)];
 
         Vector2f f0 = (1 - dx) * f00 + dx * f10;
         Vector2f f1 = (1 - dx) * f01 + dx * f11;
+
         return (1 - dy) * f0 + dy * f1;
     }
 }
