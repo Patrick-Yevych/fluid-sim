@@ -765,8 +765,6 @@ int main(int argc, char **argv)
         cudaDeviceSynchronize();
         cudaMemcpy(uc, dev_uc, dim * dim * sizeof(Vector3f), cudaMemcpyDeviceToHost);
         cudaDeviceSynchronize();
-        cudaMemcpy(u, dev_u, dim * dim * sizeof(Vector2f), cudaMemcpyDeviceToHost);
-        cudaDeviceSynchronize();
         decayForce();
     }
 
