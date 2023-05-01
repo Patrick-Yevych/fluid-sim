@@ -185,7 +185,7 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
 
 /**
  * Generalized Jacobi for computing pressure or viscous diffusion of fluid.
- * @param x is the coordinate/position vector following notation of chp 38.
+ * @param x is the coordinate/position vector following notation of paper.
  * @param field The relevant vector field
  * @param alpha rdx*rdx/(viscosity*timestep) for diffusion; -1*timestep*timestep for pressure.
  * @param beta 4+alpha for diffusion; 4 for pressure.
@@ -210,7 +210,7 @@ __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T b, T zer
 
 /**
  * Perform Jacobi iteration for the diffusion vector
- * @param x is the coordinate/position vector following notation of chp 38.
+ * @param x is the coordinate/position vector following notation of paper.
  * @param field The relevant vector field
  * @param rdx Reciprocal of the grid scale
  * @param visc Viscosity of the fluid
@@ -235,7 +235,7 @@ __device__ void next_diffusion(Vector2f x, Vector2f *field, float rdx, float vis
 
 /**
  * Perform Jacobi iteration for the diffusion vector
- * @param x is the coordinate/position vector following notation of chp 38.
+ * @param x is the coordinate/position vector following notation of paper.
  * @param field The relevant scalar field
  * @param div Timestep
  * @param rdx Reciprocal of the grid scale
@@ -299,8 +299,6 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, Vect
 
     // advection
     advect(x, u, u, timestep, rdx, dim);
-    if (x(0) == DIM / 2 && x(1) == DIM / 2)
-        printf("u[%.1f, %.1f] = (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
     __syncthreads();
 
     // diffusion
@@ -320,6 +318,10 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, Vect
     // u = w - nabla p
     u[IND(x(0), x(1), dim)] -= gradient(x, p, (float)(rdx / 2), dim);
     __syncthreads();
+
+    // print state
+    if (x(0) == DIM / 2 && x(1) == DIM / 2)
+        printf("u[%.1f, %.1f] = (%f, %f)\n", x(0), x(1), u[IND(x(0), x(1), dim)](0), u[IND(x(0), x(1), dim)](1));
 }
 
 /**
@@ -337,13 +339,9 @@ __device__ Vector3f getColor(double x)
     const double i = std::floor(a);
     const double t = a - i;
     auto d0 = data[static_cast<std::size_t>(std::ceil(a))];
-    Vector3f c0(d0[0],
-                d0[1],
-                d0[2]);
+    Vector3f c0(d0[0], d0[1], d0[2]);
     auto d1 = data[static_cast<std::size_t>(std::ceil(a))];
-    Vector3f c1(d1[0],
-                d1[1],
-                d1[2]);
+    Vector3f c1(d1[0], d1[1], d1[2]);
 
     return (1.0 - t) * c0 + t * c1;
 }
@@ -384,15 +382,13 @@ int main(int argc, char **argv)
     float r = RADIUS;
 
     // user provided simulation parameters
-    if (argc == 5)
-    {
+    if (argc == 5) {
         timestep = atof(argv[1]);
         viscosity = atof(argv[2]);
         global_decay_rate = atof(argv[3]);
         r = atof(argv[4]);
     }
-    else if (argc != 1)
-    {
+    else if (argc != 1) {
         printf("USAGE: ./out TIMESTEP VISCOSITY DECAY RADIUS\n");
         return 1;
     }
@@ -414,14 +410,11 @@ int main(int argc, char **argv)
 
     // Initialize GLFW
     if (!glfwInit())
-    {
         return -1;
-    }
 
     // Create a window
     GLFWwindow *window = glfwCreateWindow(dim, dim, "sim", NULL, NULL);
-    if (!window)
-    {
+    if (!window) {
         glfwTerminate();
         return -1;
     }
@@ -457,8 +450,7 @@ int main(int argc, char **argv)
     dim3 threads(BLOCKSIZEX, BLOCKSIZEY);
     dim3 blocks(dim / BLOCKSIZEX, dim / BLOCKSIZEY);
     // Loop until the user closes
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim, dim, 0, GL_RGB, GL_FLOAT, uc);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -485,6 +477,7 @@ int main(int argc, char **argv)
         // Poll for and process events
         glfwPollEvents();
 
+        // compute navier-stokes and colorize
         nskernel<<<blocks, threads>>>(dev_u, dev_p, rdx, viscosity, C, F, timestep, r, dim);
         cudaDeviceSynchronize();
         clrkernel<<<blocks, threads>>>(dev_uc, dev_u, dim);
