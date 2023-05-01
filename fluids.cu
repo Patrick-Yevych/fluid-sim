@@ -200,8 +200,13 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
 }
 
 /**
- * @deprecated
  * Generalalized Jacobi for computing pressure or viscous diffusion of fluid.
+ * @param x is the coordinate/position vector following notation of chp 38.
+ * @param field The relevant vector field
+ * @param alpha rdx*rdx/(viscosity*timestep) for diffusion; -1*timestep*timestep for pressure.
+ * @param beta 4+alpha for diffusion; 4 for pressure.
+ * @param b u(x) for diffusion; divergence for pressure.
+ * @param dim The maximum dimension of the field [for bound checking].
  * @authors Patrick Yevych
  */
 template <typename T>
@@ -210,19 +215,13 @@ __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T b, T zer
     int i = (int)x(0);
     int j = (int)x(1);
 
-    if (i < 0 || i >= dim || j < 0 || j >= dim)
-    {
-        return;
-    }
-    T f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(i - 1, j - 1, dim)];
+    T f00 = (i - 1 < 0 || i - 1 >= dim || j < 0 || j >= dim) ? zero : field[IND(i - 1, j, dim)];
+    T f01 = (i + 1 < 0 || i + 1 >= dim || j < 0 || j >= dim) ? zero : field[IND(i + 1, j, dim)];
+    T f10 = (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(i, j - 1, dim)];
+    T f11 = (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(i, j + 1, dim)];
+    T ab = (i < 0 || i >= dim || j < 0 || j >= dim) ? zero : (alpha * b);
 
-    T f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(1, 1, dim)];
-
-    T f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(i - 1, j + 1, dim)];
-
-    T f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(1, 1, dim)];
-
-    field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + (alpha * b)) / beta;
+    field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + ab) / beta;
 }
 
 /**
@@ -267,8 +266,8 @@ __device__ void next_poisson(Vector2f x, float *field, float div, float rdx, uns
     float alpha = -1 * rdx * rdx;
     x_next += (i - 1 < 0 || i - 1 >= dim || j < 0 || j >= dim) ? 0 : field[IND(i - 1, j, dim)];
     x_next += (i + 1 < 0 || i + 1 >= dim || j < 0 || j >= dim) ? 0 : field[IND(i + 1, j, dim)];
-    x_next += (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim - 1) ? 0 : field[IND(i, j - 1, dim)];
-    x_next += (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim - 1) ? 0 : field[IND(i, j + 1, dim)];
+    x_next += (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim) ? 0 : field[IND(i, j - 1, dim)];
+    x_next += (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim) ? 0 : field[IND(i, j + 1, dim)];
     x_next += (i < 0 || i >= dim || j < 0 || j >= dim) ? 0 : alpha * div;
     x_next /= 4;
     field[IND(i - 1, j, dim)] = x_next;
@@ -321,7 +320,9 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
     __syncthreads();
 
     // diffusion
-    next_diffusion(x, u, rdx, viscosity, timestep, dim);
+    // next_diffusion(x, u, rdx, viscosity, timestep, dim);
+    float alpha = rdx * rdx / (viscosity * timestep), beta = 4 + alpha;
+    jacobi<Vector2f>(x, u, alpha, beta, u[IND(x(0), x(1), dim)], Vector2f::Zero(), dim);
     __syncthreads();
 
     // force application
@@ -329,12 +330,9 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
     __syncthreads();
 
     // pressure
-
-    // alpha = -1 * timestep * timestep;
-    // beta = 4;
-    // jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx / 2), dim), 0, dim);
-
-    next_poisson(x, p, divergence(x, u, (float)(rdx / 2), dim), rdx, dim);
+    //next_poisson(x, p, divergence(x, u, (float)(rdx / 2), dim), rdx, dim);
+    alpha = -1 * timestep * timestep; beta = 4;
+    jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx / 2), dim), 0, dim);
     __syncthreads();
 
     // u = w - nabla p
