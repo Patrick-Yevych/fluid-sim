@@ -39,7 +39,7 @@ Our program simulates the effect of temperature change on the state of fluids of
 | --------- | --------- | ----- | ------ | ------------------------ | -------------------- |
 | 0.25      | 1         | 1     | 262144 | Air-like fluid (Default) | ![](./Demos/default) |
 | 0.1       | 10        | 5     | 262144 | Smog-like fluid          | ![](./Demos/muddy)   |
-| 4.        | 5000      | 12    | 262144 | Viscuous Oil Spill       | ![](./Demos/oilspill)|
+| 4.0       | 5000      | 12    | 262144 | Viscuous Oil Spill       | ![](./Demos/oilspill)|
 
 ## How we built it
 
