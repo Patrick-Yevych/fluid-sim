@@ -1,3 +1,14 @@
+#include <iostream>
+#include <math.h>
+#include <eigen3/Eigen/Dense>
+#include <GLFW/glfw3.h>
+#include <stdio.h>
+#include <string.h>
+
+using namespace std;
+using Eigen::Vector2f;
+using Eigen::Vector3f;
+
 /* Simulation parameters */
 #define TIMESTEP 0.25
 #define DIM 512
