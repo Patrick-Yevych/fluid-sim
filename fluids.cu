@@ -73,7 +73,7 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
     {
         glfwGetCursorPos(window, &xend, &yend);
         F[0] = xend - C[0];
-        F[1] = C[1] - yend;
+        F[1] = yend - C[1];
     }
 }
 
@@ -219,9 +219,9 @@ __device__ void jacobi(Vector2f x, T *field, float alpha, float beta, T b, T zer
     T f01 = (i + 1 < 0 || i + 1 >= dim || j < 0 || j >= dim) ? zero : field[IND(i + 1, j, dim)];
     T f10 = (i < 0 || i >= dim || j - 1 < 0 || j - 1 >= dim) ? zero : field[IND(i, j - 1, dim)];
     T f11 = (i < 0 || i >= dim || j + 1 < 0 || j + 1 >= dim) ? zero : field[IND(i, j + 1, dim)];
-    T ab = (i < 0 || i >= dim || j < 0 || j >= dim) ? zero : (alpha * b);
+    T ab = (i < 0 || i >= dim || j < 0 || j >= dim) ? zero : alpha * b;
 
-    field[IND(i, j, dim)] = (f00 + f01 + f10 + f11 + ab) / beta;
+    field[IND(i-1, j, dim)] = (f00 + f01 + f10 + f11 + ab) / beta;
 }
 
 /**
@@ -321,6 +321,7 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
 
     // diffusion
     // next_diffusion(x, u, rdx, viscosity, timestep, dim);
+
     float alpha = rdx * rdx / (viscosity * timestep), beta = 4 + alpha;
     jacobi<Vector2f>(x, u, alpha, beta, u[IND(x(0), x(1), dim)], Vector2f::Zero(), dim);
     __syncthreads();
@@ -331,7 +332,8 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, floa
 
     // pressure
     //next_poisson(x, p, divergence(x, u, (float)(rdx / 2), dim), rdx, dim);
-    alpha = -1 * timestep * timestep; beta = 4;
+
+    alpha = -1 * rdx * rdx; beta = 4;
     jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx / 2), dim), 0, dim);
     __syncthreads();
 
@@ -659,13 +661,15 @@ int main(int argc, char **argv)
     float r = RADIUS;
 
     // user provided simulation parameters
-    if (argc == 5) {
+    if (argc == 5)
+    {
         timestep = atof(argv[1]);
         viscosity = atof(argv[2]);
         global_decay_rate = atof(argv[3]);
         r = atof(argv[4]);
     }
-    else if (argc != 1) {
+    else if (argc != 1)
+    {
         printf("USAGE: ./out TIMESTEP VISCOSITY DECAY RADIUS\n");
         return 1;
     }
