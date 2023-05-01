@@ -197,7 +197,7 @@ __device__ void advect(Vector2f x, Vector2f *field, Vector2f *velfield, float ti
 }
 
 /**
- * Generalalized Jacobi for computing pressure or viscous diffusion of fluid.
+ * Generalized Jacobi for computing pressure or viscous diffusion of fluid.
  * @param x is the coordinate/position vector following notation of chp 38.
  * @param field The relevant vector field
  * @param alpha rdx*rdx/(viscosity*timestep) for diffusion; -1*timestep*timestep for pressure.
@@ -317,8 +317,6 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, Vect
     __syncthreads();
 
     // diffusion
-    // next_diffusion(x, u, rdx, viscosity, timestep, dim);
-
     float alpha = rdx * rdx / (viscosity * timestep), beta = 4 + alpha;
     jacobi<Vector2f>(x, u, alpha, beta, u[IND(x(0), x(1), dim)], Vector2f::Zero(), dim);
     __syncthreads();
@@ -328,8 +326,6 @@ __global__ void nskernel(Vector2f *u, float *p, float rdx, float viscosity, Vect
     __syncthreads();
 
     // pressure
-    //next_poisson(x, p, divergence(x, u, (float)(rdx / 2), dim), rdx, dim);
-
     alpha = -1 * rdx * rdx; beta = 4;
     jacobi<float>(x, p, alpha, beta, divergence(x, u, (float)(rdx / 2), dim), 0, dim);
     __syncthreads();
@@ -767,6 +763,13 @@ int main(int argc, char **argv)
         cudaDeviceSynchronize();
         decayForce();
     }
+
+    free(u);
+    free(p);
+    free(uc);
+    cudaFree(dev_u);
+    cudaFree(dev_p);
+    cudaFree(dev_uc);
 
     glfwTerminate();
 }
