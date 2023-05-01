@@ -9,7 +9,13 @@
 The inspiration behind fluid-sim was to create a tool that could help us better understand and simulate the behavior of air, smoke, and smog - complex fluids that play a critical role in our environment and our health. By simulating the movement and interactions of these fluids, we hope to gain insight on the effects of climate change and develop more effective strategies for modeling and predicting it.
 
 ## How to run
-This is a CUDA, Eigen, SFML, and OpenGL application. To compile, simply run 
+
+This project depends on:
+  - CUDA 12.1
+  - GLFW 3.3.8
+  - Eigen 3.4.0
+
+To compile, run 
 
 ```
 $ nvcc fluids.cu -o ./out -lglfw -lGLU -lGL
