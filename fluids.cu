@@ -46,7 +46,7 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
     }
     else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         glfwGetCursorPos(window, &xend, &yend);
-        F = Vector2f(xend - C(0), yend - C(1));
+        F = Vector2f(xend - C(0), C(1) - yend);
     }
 }
 
@@ -85,9 +85,9 @@ __device__ Vector2f bilerp(Vector2f pos, Vector2f *field, unsigned dim)
     else {
         // Perform bilinear interpolation.
 
-        Vector2f f00 = (i - 1 < 0 || i - 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i - 1, j - 1, dim)];
-        Vector2f f01 = (i + 1 < 0 || i + 1 >= dim || j - 1 < 0 || j - 1 >= dim) ? Vector2f::Zero() : field[IND(i + 1, j - 1, dim)];
-        Vector2f f10 = (i - 1 < 0 || i - 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? Vector2f::Zero() : field[IND(i - 1, j + 1, dim)];
+        Vector2f f00 = (i < 0 || i >= dim || j < 0 || j >= dim) ? Vector2f::Zero() : field[IND(i , j , dim)];
+        Vector2f f01 = (i + 1 < 0 || i + 1 >= dim || j  < 0 || j  >= dim) ? Vector2f::Zero() : field[IND(i + 1, j , dim)];
+        Vector2f f10 = (i  < 0 || i  >= dim || j + 1 < 0 || j + 1 >= dim) ? Vector2f::Zero() : field[IND(i , j + 1, dim)];
         Vector2f f11 = (i + 1 < 0 || i + 1 >= dim || j + 1 < 0 || j + 1 >= dim) ? Vector2f::Zero() : field[IND(i + 1, j + 1, dim)];
 
         Vector2f f0 = (1 - dx) * f00 + dx * f10;
@@ -268,7 +268,7 @@ __device__ Vector3f getColor(double x)
 {
     double data[][3] = VIRIDIS;
 
-    const double a = CLAMP(x) * 255;
+    const double a = CLAMP(x)/4 * 255;
     const double i = std::floor(a);
     const double t = a - i;
     auto d0 = data[static_cast<std::size_t>(std::ceil(a))];
